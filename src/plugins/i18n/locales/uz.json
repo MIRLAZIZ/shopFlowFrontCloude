@@ -1,0 +1,59 @@
+{
+  "add": "Qo'shish",
+  "update": "Yangilash",
+  "search": "Qidirish",
+  "discard": "Bekor qilish",
+  "success": "Muvaffaqiyatli",
+  "serverError": "Serverda xatolik yuz berdi",
+  "no_data": "Ma’lumot mavjud emas",
+  "delete": "O‘chirish",
+  "cancel": "Bekor qilish",
+  "ok": "OK",
+  "delete_confirm": "Ushbu elementni o‘chirishga ishonchingiz komilmi?",
+  "network_error": "Tarmoq xatosi. Iltimos, internet aloqangizni tekshiring.",
+  "server_unavailable": "Server vaqtincha mavjud emas. Iltimos, keyinroq urinib ko‘ring.",
+  "server_error": "Serverda xato yuz berdi. Iltimos, qayta urinib ko‘ring.",
+  "request_timeout": "So‘rov vaqti tugadi. Iltimos, aloqangizni tekshiring.",
+  "connection_error": "Aloqa xatosi. Iltimos, tarmogingizni tekshiring.",
+  "loading": "Yuklanmoqda...",
+  "headers": {
+    "number": "No",
+    "name": "Nomi",
+    "label": "Nomi",
+    "actions": "Amallar"
+  },
+  "dashboard": {
+    "title": "Dashboard"
+  },
+  "products": {
+    "title": "Mahsulotlar"
+  },
+  "unit": {
+    "title": "O'lchov birligi",
+    "add": "O'lchov birligi qo'shish",
+    "edit": "O'lchov birligi tahrirlash",
+    "unit": "O'lchov birligi",
+    "label": "Nomi",
+    "unit-placeholder": "O'lchov birligini kiriting (kg)"
+  },
+  "categorys": {
+    "title": "Kategoriyalar",
+    "add": "Kategoriya qo‘shish",
+    "edit": "Kategoriya tahrirlash",
+    "name": "Nomi",
+    "category-placeholder": "Kategoriya nomini kiriting"
+  },
+  "users": {
+    "title": "Foydalanuvchilar",
+    "add": "Foydalanuvchi qo'shish",
+    "edit": "Foydalanuvchi tahrirlash",
+    "name": "Ism",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "user-placeholder": "Foydalanuvchi ismini kiriting",
+    "email-placeholder": "Foydalanuvchi emailini kiriting",
+    "role-placeholder": "Foydalanuvchi rolini tanlang",
+    "status-placeholder": "Foydalanuvchi statusini tanlang"
+  }
+}

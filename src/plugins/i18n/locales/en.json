@@ -1,0 +1,58 @@
+{
+  "add": "Add",
+  "search": "Search",
+  "update": "Update",
+  "discard": "Discard",
+  "success": "Success",
+  "serverError": "Server Error",
+  "no_data": "No data available",
+  "delete_confirm": "Are you sure you want to delete this item?",
+  "cancel": "Cancel",
+  "ok": "OK",
+  "network_error": "Network error. Please check your internet connection.",
+  "server_unavailable": "Server is temporarily unavailable. Please try later.",
+  "server_error": "Server error occurred. Please try again.",
+  "request_timeout": "Request timed out. Please check your connection.",
+  "connection_error": "Connection error. Please check your network.",
+  "loading": "Loading...",
+  "headers": {
+    "number": "N",
+    "name": "Name",
+    "label": "Label",
+    "actions": "Actions"
+  },
+  "dashboard": {
+    "title": "Dashboard"
+  },
+  "products": {
+    "title": "Products"
+  },
+  "unit": {
+    "title": "Units",
+    "add": "Add unit",
+    "edit": "Edit unit",
+    "unit": "Unit",
+    "label": "Label",
+    "unit-placeholder": "Enter unit (e.g. kg)"
+  },
+  "categorys": {
+    "title": "Categories",
+    "add": "Add Category",
+    "edit": "Edit Category",
+    "name": "Name",
+    "category-placeholder": "Enter category name"
+  },
+  "users": {
+    "title": "Users",
+    "add": "Add User",
+    "edit": "Edit User",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "user-placeholder": "Enter user name",
+    "email-placeholder": "Enter user email",
+    "role-placeholder": "Select user role",
+    "status-placeholder": "Select user status"
+  }
+}
