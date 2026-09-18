@@ -32,8 +32,17 @@ export const useProductsStore = defineStore('products', {
     }),
 
     actions: {
-        async fetchProducts(page: number) {
-            const response: ApiResponse<Product> = await $api(`products/?page=${page}`);
+        async fetchProducts(
+            page: number,
+            options?: { limit?: number; name?: string; stock?: string; status?: string },
+        ) {
+            const query = new URLSearchParams({ page: String(page) })
+            if (options?.limit) query.append('limit', String(options.limit))
+            if (options?.name) query.append('name', options.name)
+            if (options?.stock) query.append('stock', options.stock)
+            if (options?.status !== undefined && options.status !== '') query.append('status', options.status)
+
+            const response: ApiResponse<Product> = await $api(`products/?${query.toString()}`);
 
 
             this.products = response.data.data;

@@ -10,8 +10,12 @@ export interface Product {
     price_history: PriceHistory[]
     quantity: number
     isLowStock: boolean
-    unit: null | number
+    unit: null | number | { id: number; name: string }
     price_mode: string
+    selling_price?: number
+    purchase_price?: number
+    stock?: 'IN_STOCK' | 'OUT_OF_STOCK' | 'LOW_STOCK'
+    status?: boolean
 }
 
 export interface ProductBatch {
