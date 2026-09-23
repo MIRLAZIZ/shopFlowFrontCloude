@@ -2,7 +2,7 @@
 // Ombor nomlari: products, customers, pendingOrders
 
 const DB_NAME = 'shopflow-offline'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 let dbPromise: Promise<IDBDatabase> | null = null
 
@@ -19,6 +19,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains('customers')) {
         db.createObjectStore('customers', { keyPath: 'id' })
+      }
+      if (!db.objectStoreNames.contains('debts')) {
+        db.createObjectStore('debts', { keyPath: 'id' })
       }
       if (!db.objectStoreNames.contains('pendingOrders')) {
         db.createObjectStore('pendingOrders', { keyPath: 'localId' })
@@ -50,7 +53,7 @@ async function tx<T>(
 }
 
 export const offlineDb = {
-  async putAll(storeName: 'products' | 'customers', items: any[]) {
+  async putAll(storeName: 'products' | 'customers' | 'debts', items: any[]) {
     const db = await openDb()
     return new Promise<void>((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readwrite')
@@ -62,11 +65,11 @@ export const offlineDb = {
     })
   },
 
-  async getAll<T = any>(storeName: 'products' | 'customers'): Promise<T[]> {
+  async getAll<T = any>(storeName: 'products' | 'customers' | 'debts'): Promise<T[]> {
     return tx(storeName, 'readonly', store => store.getAll())
   },
 
-  async put(storeName: 'products' | 'customers', item: any) {
+  async put(storeName: 'products' | 'customers' | 'debts', item: any) {
     return tx(storeName, 'readwrite', store => store.put(item))
   },
 

@@ -33,9 +33,34 @@
       </div>
     </div>
 
+    <!-- ═══════════════ SAVAT TABLARI ═══════════════ -->
+    <div class="d-flex align-center gap-2 mb-3 flex-wrap">
+      <VChip
+        v-for="b in baskets"
+        :key="b.id"
+        :color="b.id === activeBasketId ? 'primary' : undefined"
+        :variant="b.id === activeBasketId ? 'flat' : 'tonal'"
+        class="cursor-pointer"
+        @click="activeBasketId = b.id"
+      >
+        {{ b.label }}
+        <VChip v-if="b.cart.length" size="x-small" class="ml-1">{{ b.cart.length }}</VChip>
+        <VIcon
+          v-if="baskets.length > 1"
+          icon="tabler-x"
+          size="14"
+          class="ml-1"
+          @click.stop="closeBasket(b.id)"
+        />
+      </VChip>
+      <VBtn icon size="small" variant="tonal" @click="addBasket">
+        <VIcon icon="tabler-plus" />
+      </VBtn>
+    </div>
+
     <VRow>
-      <!-- ═══════════════ 1) MAHSULOTLAR RO'YXATI (kichikroq) ═══════════════ -->
-      <VCol cols="12" md="4">
+      <!-- ═══════════════ 1) MAHSULOTLAR RO'YXATI ═══════════════ -->
+      <VCol cols="12" md="3">
         <VCard title="Mahsulotlar" class="h-100 d-flex flex-column">
           <VCardText class="pb-2">
             <VTextField
@@ -83,7 +108,7 @@
                 <th>Kod</th>
                 <th>Nomi</th>
                 <th class="text-end">Narxi</th>
-                <th class="text-end">Qoldiq</th>
+                <th class="text-end">Qold.</th>
               </tr>
             </thead>
             <tbody>
@@ -112,9 +137,7 @@
           </VTable>
 
           <VCardText class="d-flex justify-space-between align-center py-2">
-            <span class="text-caption text-medium-emphasis">
-              {{ productsStore.total }} ta
-            </span>
+            <span class="text-caption text-medium-emphasis">{{ productsStore.total }} ta</span>
             <VPagination
               v-if="isOnline"
               v-model="listPage"
@@ -128,24 +151,19 @@
         </VCard>
       </VCol>
 
-      <!-- ═══════════════ 2) SAVAT (CHEK) — kattaroq ═══════════════ -->
-      <VCol cols="12" md="8">
-        <VCard title="Savat" class="h-100">
+      <!-- ═══════════════ 2) SAVAT (CHEK) ═══════════════ -->
+      <VCol cols="12" md="6">
+        <VCard :title="activeBasket.label" class="h-100">
           <template #append>
-            <div class="d-flex gap-2">
-              <VChip v-if="cart.length" color="primary" variant="tonal">
-                {{ cart.length }} mahsulot
-              </VChip>
-              <VBtn
-                v-if="cart.length"
-                size="small"
-                variant="text"
-                color="error"
-                @click="clearCart()"
-              >
-                Tozalash
-              </VBtn>
-            </div>
+            <VBtn
+              v-if="cart.length"
+              size="small"
+              variant="text"
+              color="error"
+              @click="emptyActiveBasket()"
+            >
+              Tozalash
+            </VBtn>
           </template>
 
           <VCardText>
@@ -157,10 +175,10 @@
               <thead>
                 <tr>
                   <th>Mahsulot</th>
-                  <th style="width: 130px">Miqdor</th>
-                  <th style="width: 100px">Chegirma, %</th>
-                  <th class="text-end">Jami</th>
-                  <th style="width: 40px" />
+                  <th style="width: 120px">Miqdor</th>
+                  <th style="width: 110px">Summa</th>
+                  <th style="width: 80px">Cheg. %</th>
+                  <th style="width: 36px" />
                 </tr>
               </thead>
               <tbody>
@@ -181,13 +199,30 @@
                         type="number"
                         density="compact"
                         hide-details
-                        style="width: 60px"
+                        style="width: 64px"
+                        @focus="targetLineQuantity(line)"
                         @update:model-value="clampQty(line)"
                       />
                       <VBtn icon size="x-small" variant="tonal" @click="stepQty(line, 1)">
                         <VIcon icon="tabler-plus" size="14" />
                       </VBtn>
                     </div>
+                  </td>
+                  <td>
+                    <!--
+                      Vazn/summa bo'yicha avto hisoblash: masalan banan 22 000/kg,
+                      tarozida 2 dona emas balki 0.68 kg bo'lsa — kassir shu yerga
+                      to'g'ridan-to'g'ri to'langan summani (masalan 15 000) kiritadi,
+                      miqdor (kg) avtomatik narxga bo'linib hisoblanadi.
+                    -->
+                    <VTextField
+                      :model-value="grossAmount(line)"
+                      type="number"
+                      density="compact"
+                      hide-details
+                      @focus="targetLineAmount(line)"
+                      @update:model-value="val => onAmountInput(line, val)"
+                    />
                   </td>
                   <td>
                     <VTextField
@@ -197,11 +232,8 @@
                       hide-details
                       min="0"
                       max="100"
-                      suffix="%"
+                      @focus="targetLineDiscount(line)"
                     />
-                  </td>
-                  <td class="text-end font-weight-medium">
-                    {{ formatMoney(lineTotal(line)) }}
                   </td>
                   <td>
                     <IconBtn size="small" @click="removeFromCart(line.productId)">
@@ -229,7 +261,8 @@
                 <AppTextField
                   v-model.number="overallDiscountValue"
                   type="number"
-                  label="Umumiy chegirma (barcha mahsulotlarga)"
+                  label="Umumiy chegirma"
+                  @focus="targetOverallDiscount()"
                 />
               </VCol>
               <VCol cols="12" sm="3">
@@ -259,239 +292,186 @@
               <span>Umumiy chegirma:</span>
               <span>- {{ formatMoney(overallDiscountAmount) }} so'm</span>
             </div>
-            <div class="d-flex justify-space-between text-h6 mb-4">
+            <div class="d-flex justify-space-between text-h6">
               <span>To'lanadi:</span>
               <span>{{ formatMoney(grandTotal) }} so'm</span>
             </div>
+          </VCardText>
+        </VCard>
+      </VCol>
 
-            <div class="d-flex gap-2">
-              <VBtn
-                size="large"
-                color="primary"
-                class="flex-grow-1"
-                :disabled="!cart.length"
-                @click="openPaymentDialog"
-              >
-                To'lash (F4)
-              </VBtn>
-              <VBtn
-                size="large"
-                variant="tonal"
-                prepend-icon="tabler-device-floppy"
-                :disabled="!cart.length"
-                @click="holdSale"
-              >
-                Saqlash
-                <VChip v-if="heldSales.length" size="x-small" class="ml-2">{{ heldSales.length }}</VChip>
-              </VBtn>
-              <VBtn
-                size="large"
-                variant="tonal"
-                color="error"
-                :disabled="!cart.length"
-                @click="clearCart()"
-              >
-                Bekor (Esc)
-              </VBtn>
+      <!-- ═══════════════ 3) TO'LOV ═══════════════ -->
+      <VCol cols="12" md="3">
+        <VCard title="To'lov" class="h-100">
+          <VCardText>
+            <div class="d-flex justify-space-between mb-3">
+              <span class="text-medium-emphasis">To'lanadi:</span>
+              <span class="text-h6">{{ formatMoney(grandTotal) }} so'm</span>
             </div>
 
-            <VExpansionPanels v-if="heldSales.length" class="mt-4" variant="accordion">
-              <VExpansionPanel title="Saqlangan savatlar">
-                <template #text>
-                  <div
-                    v-for="held in heldSales"
-                    :key="held.id"
-                    class="d-flex justify-space-between align-center py-1"
-                  >
-                    <span class="text-caption">
-                      {{ held.cart.length }} mahsulot — {{ formatMoney(held.total) }} so'm
-                    </span>
-                    <div class="d-flex gap-1">
-                      <VBtn size="x-small" variant="text" color="primary" @click="resumeHeld(held.id)">
-                        Tiklash
-                      </VBtn>
-                      <VBtn size="x-small" variant="text" color="error" @click="discardHeld(held.id)">
-                        O'chirish
-                      </VBtn>
-                    </div>
-                  </div>
+            <VRow dense class="mb-3">
+              <VCol v-for="opt in paymentOptions" :key="opt.value" cols="6">
+                <VCard
+                  :variant="paymentType === opt.value ? 'flat' : 'tonal'"
+                  :color="paymentType === opt.value ? 'primary' : undefined"
+                  class="pos-pay-card text-center pa-2"
+                  @click="selectPaymentType(opt.value)"
+                >
+                  <VIcon :icon="opt.icon" size="20" class="mb-1" />
+                  <div class="text-caption">{{ opt.title }}</div>
+                </VCard>
+              </VCol>
+            </VRow>
+
+            <template v-if="paymentType !== 'mixed'">
+              <AppTextField
+                v-model.number="paidAmount"
+                type="number"
+                label="Berilgan summa"
+                class="mb-3"
+                @focus="targetPaidAmount()"
+                @update:model-value="paidAmountTouched = true"
+              />
+            </template>
+            <template v-else>
+              <AppTextField
+                v-model.number="mixedCash"
+                type="number"
+                label="Naqd"
+                class="mb-2"
+                @focus="targetMixedCash()"
+                @update:model-value="mixedTouched = true"
+              />
+              <AppTextField
+                v-model.number="mixedCard"
+                type="number"
+                label="Karta"
+                class="mb-3"
+                @focus="targetMixedCard()"
+                @update:model-value="mixedTouched = true"
+              />
+            </template>
+
+            <div class="d-flex justify-space-between mb-1 text-body-2">
+              <span class="text-medium-emphasis">To'landi:</span>
+              <span>{{ formatMoney(effectivePaid) }} so'm</span>
+            </div>
+            <div v-if="changeAmount > 0" class="d-flex justify-space-between mb-2 text-success">
+              <span>Qaytim:</span>
+              <span class="font-weight-medium">{{ formatMoney(changeAmount) }} so'm</span>
+            </div>
+
+            <div v-if="debtAmount > 0" class="mb-3">
+              <div class="d-flex justify-space-between text-error mb-2">
+                <span>Qarz qoladi:</span>
+                <span class="font-weight-medium">{{ formatMoney(debtAmount) }} so'm</span>
+              </div>
+
+              <VAutocomplete
+                v-model="customerId"
+                v-model:search="customerSearch"
+                :items="customersStore.customers"
+                item-title="fullName"
+                item-value="id"
+                label="Mijoz (qarz uchun majburiy)"
+                :loading="customerLoading"
+                :disabled="!isOnline"
+                clearable
+                no-filter
+                density="compact"
+                @update:search="onCustomerSearch"
+              >
+                <template #append>
+                  <VBtn icon size="small" variant="text" :disabled="!isOnline" @click="newCustomerDialog = true">
+                    <VIcon icon="tabler-user-plus" />
+                  </VBtn>
                 </template>
-              </VExpansionPanel>
-            </VExpansionPanels>
+              </VAutocomplete>
+              <p v-if="!isOnline" class="text-caption text-warning mt-1">
+                Oflaynda faqat keshlangan mijozlardan tanlanadi
+              </p>
+            </div>
+
+            <VBtn
+              block
+              size="large"
+              color="primary"
+              :disabled="!cart.length || checkingOut"
+              :loading="checkingOut"
+              @click="checkout"
+            >
+              To'lash (F4)
+            </VBtn>
           </VCardText>
         </VCard>
       </VCol>
     </VRow>
 
-    <!-- ═══════════════ SO'NGGI CHEKLAR ═══════════════ -->
-    <VCard title="So'nggi cheklar" class="mt-6">
-      <VTable density="comfortable">
-        <thead>
-          <tr>
-            <th>№</th>
-            <th>Vaqt</th>
-            <th>To'lov turi</th>
-            <th class="text-end">Summa</th>
-            <th>Holati</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="o in recentOrders" :key="o.id">
-            <td>#{{ o.id }}</td>
-            <td>{{ formatDate(o.createdAt) }}</td>
-            <td>{{ paymentLabel(o.paymentType) }}</td>
-            <td class="text-end">{{ formatMoney(o.total) }} so'm</td>
-            <td>
-              <VChip :color="o.status === 'completed' ? 'success' : 'error'" size="small">
-                {{ o.status === 'completed' ? 'Yakunlangan' : 'Bekor qilingan' }}
-              </VChip>
-            </td>
-          </tr>
-          <tr v-if="!recentOrders.length">
-            <td colspan="5" class="text-center text-medium-emphasis py-4">Cheklar yo'q</td>
-          </tr>
-        </tbody>
-      </VTable>
-    </VCard>
-
-    <!-- ═══════════════ TO'LOV MODALI ═══════════════ -->
-    <VDialog v-model="paymentDialog" max-width="560" persistent>
-      <VCard title="To'lov">
-        <template #append>
-          <VBtn icon variant="text" @click="paymentDialog = false">
-            <VIcon icon="tabler-x" />
-          </VBtn>
-        </template>
-
-        <VCardText>
-          <div class="d-flex justify-space-between mb-4">
-            <span class="text-medium-emphasis">To'lanadigan summa:</span>
-            <span class="text-h5 font-weight-bold">{{ formatMoney(grandTotal) }} so'm</span>
-          </div>
-
-          <VRow dense class="mb-4">
-            <VCol v-for="opt in paymentOptions" :key="opt.value" cols="6" sm="3">
-              <VCard
-                :variant="paymentType === opt.value ? 'flat' : 'tonal'"
-                :color="paymentType === opt.value ? 'primary' : undefined"
-                class="pos-pay-card text-center pa-3"
-                @click="selectPaymentType(opt.value)"
+    <!-- ═══════════════ RAQAMLI PANEL + SO'NGGI CHEKLAR ═══════════════ -->
+    <VRow class="mt-4">
+      <VCol cols="12" md="4">
+        <VCard title="Raqamli panel">
+          <template #append>
+            <span class="text-caption text-medium-emphasis">{{ activeTargetLabel }}</span>
+          </template>
+          <VCardText>
+            <div class="pos-keypad">
+              <VBtn
+                v-for="key in ['7','8','9','4','5','6','1','2','3','0','00','⌫']"
+                :key="key"
+                variant="tonal"
+                class="pos-keypad__btn"
+                :disabled="!activeTarget"
+                @click="pressKey(key)"
               >
-                <VIcon :icon="opt.icon" size="22" class="mb-1" />
-                <div class="text-caption">{{ opt.title }}</div>
-              </VCard>
-            </VCol>
-          </VRow>
-
-          <VRow dense class="mb-2">
-            <template v-if="paymentType !== 'mixed'">
-              <VCol cols="12">
-                <VTextField
-                  v-model.number="paidAmount"
-                  type="number"
-                  label="Berilgan summa"
-                  variant="outlined"
-                  density="comfortable"
-                  @focus="setActiveField('paidAmount')"
-                  @update:model-value="onManualEdit('paidAmount')"
-                />
-              </VCol>
-            </template>
-            <template v-else>
-              <VCol cols="6">
-                <VTextField
-                  v-model.number="mixedCash"
-                  type="number"
-                  label="Naqd"
-                  variant="outlined"
-                  density="comfortable"
-                  @focus="setActiveField('mixedCash')"
-                  @update:model-value="onManualEdit('mixedCash')"
-                />
-              </VCol>
-              <VCol cols="6">
-                <VTextField
-                  v-model.number="mixedCard"
-                  type="number"
-                  label="Karta"
-                  variant="outlined"
-                  density="comfortable"
-                  @focus="setActiveField('mixedCard')"
-                  @update:model-value="onManualEdit('mixedCard')"
-                />
-              </VCol>
-            </template>
-          </VRow>
-
-          <!-- Raqamli panel -->
-          <div class="pos-keypad mb-4">
-            <VBtn
-              v-for="key in ['7','8','9','4','5','6','1','2','3','0','00','⌫']"
-              :key="key"
-              variant="tonal"
-              class="pos-keypad__btn"
-              @click="pressKey(key)"
-            >
-              {{ key }}
-            </VBtn>
-            <VBtn variant="tonal" color="error" class="pos-keypad__btn pos-keypad__btn--clear" @click="pressClear">
-              C
-            </VBtn>
-          </div>
-
-          <div class="d-flex justify-space-between mb-1 text-body-2">
-            <span class="text-medium-emphasis">To'landi:</span>
-            <span>{{ formatMoney(effectivePaid) }} so'm</span>
-          </div>
-          <div v-if="changeAmount > 0" class="d-flex justify-space-between mb-1 text-success">
-            <span>Qaytim:</span>
-            <span class="font-weight-medium">{{ formatMoney(changeAmount) }} so'm</span>
-          </div>
-          <div v-if="debtAmount > 0" class="mb-3">
-            <div class="d-flex justify-space-between text-error mb-2">
-              <span>Qarz qoladi:</span>
-              <span class="font-weight-medium">{{ formatMoney(debtAmount) }} so'm</span>
+                {{ key }}
+              </VBtn>
+              <VBtn
+                variant="tonal"
+                color="error"
+                class="pos-keypad__btn pos-keypad__btn--clear"
+                :disabled="!activeTarget"
+                @click="pressClear"
+              >
+                C
+              </VBtn>
             </div>
+          </VCardText>
+        </VCard>
+      </VCol>
 
-            <VAutocomplete
-              v-model="customerId"
-              v-model:search="customerSearch"
-              :items="customersStore.customers"
-              item-title="fullName"
-              item-value="id"
-              label="Mijoz (qarz uchun majburiy)"
-              variant="outlined"
-              density="comfortable"
-              :loading="customerLoading"
-              :disabled="!isOnline"
-              clearable
-              no-filter
-              @update:search="onCustomerSearch"
-            >
-              <template #append>
-                <VBtn icon size="small" variant="text" :disabled="!isOnline" @click="newCustomerDialog = true">
-                  <VIcon icon="tabler-user-plus" />
-                </VBtn>
-              </template>
-            </VAutocomplete>
-            <p v-if="!isOnline" class="text-caption text-warning mt-1">
-              Oflayn holatda faqat avval keshlangan mijozlardan tanlash mumkin
-            </p>
-          </div>
-
-          <VBtn
-            block
-            size="large"
-            color="primary"
-            :disabled="checkingOut"
-            :loading="checkingOut"
-            @click="checkout"
-          >
-            Tasdiqlash
-          </VBtn>
-        </VCardText>
-      </VCard>
-    </VDialog>
+      <VCol cols="12" md="8">
+        <VCard title="So'nggi cheklar">
+          <VTable density="comfortable">
+            <thead>
+              <tr>
+                <th>№</th>
+                <th>Vaqt</th>
+                <th>To'lov turi</th>
+                <th class="text-end">Summa</th>
+                <th>Holati</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="o in recentOrders" :key="o.id">
+                <td>#{{ o.id }}</td>
+                <td>{{ formatDate(o.createdAt) }}</td>
+                <td>{{ paymentLabel(o.paymentType) }}</td>
+                <td class="text-end">{{ formatMoney(o.total) }} so'm</td>
+                <td>
+                  <VChip :color="o.status === 'completed' ? 'success' : 'error'" size="small">
+                    {{ o.status === 'completed' ? 'Yakunlangan' : 'Bekor qilingan' }}
+                  </VChip>
+                </td>
+              </tr>
+              <tr v-if="!recentOrders.length">
+                <td colspan="5" class="text-center text-medium-emphasis py-4">Cheklar yo'q</td>
+              </tr>
+            </tbody>
+          </VTable>
+        </VCard>
+      </VCol>
+    </VRow>
 
     <!-- Tezkor mijoz qo'shish -->
     <VDialog v-model="newCustomerDialog" max-width="420">
@@ -522,7 +502,7 @@
             class="d-flex justify-space-between align-center py-2 border-b"
           >
             <div>
-              <div class="text-body-2">{{ formatMoney(orderPayloadTotal(o.payload)) }} so'm</div>
+              <div class="text-body-2">{{ formatMoney(o.payload?.paidAmount ?? 0) }} so'm</div>
               <div class="text-caption text-medium-emphasis">
                 {{ formatDate(o.createdAt) }}
                 <VChip :color="o.status === 'failed' ? 'error' : 'warning'" size="x-small" class="ml-1">
@@ -619,11 +599,13 @@ interface CartLine {
   availableQuantity: number
 }
 
-interface HeldSale {
+interface Basket {
   id: number
+  label: string
   cart: CartLine[]
-  total: number
-  savedAt: Date
+  overallDiscountValue: number
+  overallDiscountType: 'percent' | 'amount'
+  note: string
 }
 
 const productsStore = useProductsStore()
@@ -652,16 +634,89 @@ onMounted(() => {
   }
 })
 
+// ─────────────────────────── Bir nechta savat (tablar) ───────────────────────────
+let nextBasketId = 2
+function makeBasket(id: number): Basket {
+  return {
+    id,
+    label: `Savat ${id}`,
+    cart: [],
+    overallDiscountValue: 0,
+    overallDiscountType: 'percent',
+    note: '',
+  }
+}
+
+const baskets = ref<Basket[]>([makeBasket(1)])
+const activeBasketId = ref(1)
+const activeBasket = computed(
+  () => baskets.value.find(b => b.id === activeBasketId.value) ?? baskets.value[0],
+)
+
+function addBasket() {
+  const b = makeBasket(nextBasketId++)
+  baskets.value.push(b)
+  activeBasketId.value = b.id
+  paidAmountTouched.value = false
+  mixedTouched.value = false
+  focusScan()
+}
+
+function closeBasket(id: number) {
+  if (baskets.value.length === 1) {
+    emptyActiveBasket()
+    return
+  }
+  const idx = baskets.value.findIndex(b => b.id === id)
+  if (idx === -1) return
+  baskets.value.splice(idx, 1)
+  if (activeBasketId.value === id) {
+    activeBasketId.value = baskets.value[Math.max(idx - 1, 0)].id
+  }
+}
+
+function emptyActiveBasket() {
+  activeBasket.value.cart = []
+  activeBasket.value.overallDiscountValue = 0
+  activeBasket.value.note = ''
+  paidAmountTouched.value = false
+  mixedTouched.value = false
+  customerId.value = null
+  paymentType.value = 'cash'
+}
+
+// Eski kod bazasi bilan moslik uchun: cart/overallDiscount... hozir faol
+// savatga "proksi" qiladi — shu orqali pastdagi barcha hisob-kitob
+// funksiyalari o'zgarishsiz ishlayveradi.
+const cart = computed({
+  get: () => activeBasket.value.cart,
+  set: v => { activeBasket.value.cart = v },
+})
+const overallDiscountValue = computed({
+  get: () => activeBasket.value.overallDiscountValue,
+  set: v => { activeBasket.value.overallDiscountValue = v },
+})
+const overallDiscountType = computed({
+  get: () => activeBasket.value.overallDiscountType,
+  set: v => { activeBasket.value.overallDiscountType = v },
+})
+const note = computed({
+  get: () => activeBasket.value.note,
+  set: v => { activeBasket.value.note = v },
+})
+
 // ─────────────────────────── Oflayn kesh ───────────────────────────
 async function refreshOfflineCache() {
   if (!isOnline.value) return
   try {
-    const [productsRes, customersRes] = await Promise.all([
+    const [productsRes, customersRes, debtsRes] = await Promise.all([
       $api('/products?page=1&limit=1000') as Promise<any>,
       $api('/customers?page=1&limit=1000') as Promise<any>,
+      $api('/debts?page=1&limit=1000&status=open') as Promise<any>,
     ])
     await offlineStore.cacheProducts(productsRes?.data?.data ?? [])
     await offlineStore.cacheCustomers(customersRes?.data?.data ?? [])
+    await offlineStore.cacheDebts(debtsRes?.data?.data ?? [])
   } catch {
     // jim turadi — kesh yangilanmasa ham asosiy oqim davom etadi
   }
@@ -695,7 +750,7 @@ async function loadList(page: number = 1) {
 
   if (!isOnline.value) {
     const cached = await offlineStore.getCachedProducts()
-    const filtered = cached.filter(p => {
+    const filtered = cached.filter((p: any) => {
       if (listSearch.value?.trim()) {
         const q = listSearch.value.trim().toLowerCase()
         const hit =
@@ -730,7 +785,6 @@ async function loadList(page: number = 1) {
 const debouncedListSearch = useDebounceFn(() => loadList(1), 350)
 
 // ─────────────────────────── Savat ───────────────────────────
-const cart = ref<CartLine[]>([])
 const scanInputRef = ref()
 const scanQuery = ref('')
 
@@ -753,14 +807,17 @@ function addToCart(product: Product) {
     }
     existing.quantity += 1
   } else {
-    cart.value.push({
-      productId: product.id,
-      name: product.name,
-      price: product.selling_price ?? 0,
-      quantity: 1,
-      discountPercent: 0,
-      availableQuantity: availableQty,
-    })
+    cart.value = [
+      ...cart.value,
+      {
+        productId: product.id,
+        name: product.name,
+        price: product.selling_price ?? 0,
+        quantity: 1,
+        discountPercent: 0,
+        availableQuantity: availableQty,
+      },
+    ]
   }
 }
 
@@ -770,7 +827,7 @@ async function onScanEnter() {
 
   if (!isOnline.value) {
     const cached = await offlineStore.getCachedProducts()
-    const match = cached.find(p => p.barcode === value || p.quick_code === value)
+    const match = cached.find((p: any) => p.barcode === value || p.quick_code === value)
     if (match) {
       addToCart(match)
       scanQuery.value = ''
@@ -806,8 +863,11 @@ function removeFromCart(productId: number) {
   cart.value = cart.value.filter(l => l.productId !== productId)
 }
 
+// ⚠️ Vazn bo'yicha sotiladigan mahsulotlar (masalan meva-sabzavot) uchun
+// miqdor butun son bo'lishi shart emas — shuning uchun faqat musbatlikni
+// tekshiramiz, 1 gacha yaxlitlab yubormaymiz.
 function clampQty(line: CartLine) {
-  if (!line.quantity || line.quantity < 1) line.quantity = 1
+  if (!line.quantity || line.quantity <= 0) line.quantity = 0.001
   if (line.quantity > line.availableQuantity) {
     line.quantity = line.availableQuantity
     toastStore.error("Omborda shuncha mahsulot yo'q")
@@ -815,7 +875,22 @@ function clampQty(line: CartLine) {
 }
 
 function stepQty(line: CartLine, delta: number) {
-  line.quantity = (Number(line.quantity) || 0) + delta
+  line.quantity = round2((Number(line.quantity) || 0) + delta)
+  clampQty(line)
+}
+
+// Chegirmasiz, xom summa (narx x miqdor) — "Summa" ustunida ko'rsatiladi
+function grossAmount(line: CartLine) {
+  return round2(line.price * line.quantity)
+}
+
+// Kassir "Summa" ustuniga to'g'ridan-to'g'ri pul miqdorini kiritsa
+// (masalan tarozidagi banan uchun 15 000 so'm to'lanadi, narxi 22 000/kg
+// bo'lsa), miqdor (kg) avtomatik shu summadan hisoblab olinadi.
+function onAmountInput(line: CartLine, value: number | string) {
+  const amount = Number(value)
+  if (!line.price || Number.isNaN(amount)) return
+  line.quantity = round2(amount / line.price)
   clampQty(line)
 }
 
@@ -823,34 +898,14 @@ function lineDiscountAmount(line: CartLine) {
   return round2((line.price * line.quantity * (line.discountPercent || 0)) / 100)
 }
 
-function lineTotal(line: CartLine) {
-  return line.price * line.quantity - lineDiscountAmount(line)
-}
-
 function round2(value: number) {
-  return Math.round(value * 100) / 100
-}
-
-function clearCart() {
-  cart.value = []
-  overallDiscountValue.value = 0
-  note.value = ''
-  paymentType.value = 'cash'
-  customerId.value = null
-  paidAmountTouched.value = false
-  mixedTouched.value = false
-  focusScan()
+  return Math.round(value * 1000) / 1000
 }
 
 const subtotal = computed(() => cart.value.reduce((sum, l) => sum + l.price * l.quantity, 0))
 const lineDiscountsTotal = computed(() =>
   round2(cart.value.reduce((sum, l) => sum + lineDiscountAmount(l), 0)),
 )
-
-// ─────────────────────────── Umumiy chegirma ───────────────────────────
-const overallDiscountValue = ref(0)
-const overallDiscountType = ref<'percent' | 'amount'>('percent')
-const note = ref('')
 
 const overallDiscountAmount = computed(() => {
   const base = Math.max(subtotal.value - lineDiscountsTotal.value, 0)
@@ -864,8 +919,7 @@ const grandTotal = computed(() =>
   Math.max(subtotal.value - lineDiscountsTotal.value - overallDiscountAmount.value, 0),
 )
 
-// ─────────────────────────── To'lov (modal) ───────────────────────────
-const paymentDialog = ref(false)
+// ─────────────────────────── To'lov ───────────────────────────
 const paymentOptions = [
   { title: 'Naqd', value: 'cash', icon: 'tabler-cash' },
   { title: 'Karta', value: 'card', icon: 'tabler-credit-card' },
@@ -878,10 +932,9 @@ const paidAmount = ref(0)
 const mixedCash = ref(0)
 const mixedCard = ref(0)
 
-// "touched" flag'lar: foydalanuvchi summani qo'lda o'zgartirganini bildiradi.
-// Shu orqali savat o'zgarganda (masalan chegirma qo'shilganda) foydalanuvchi
-// ataylab kiritgan QISMAN to'lov (qarz uchun) qayta ustidan yozib
-// yuborilmaydi — avvalgi versiyadagi asosiy bug shu edi.
+// "touched": foydalanuvchi summani qo'lda o'zgartirganini bildiradi — savat
+// keyin o'zgarsa ham (masalan chegirma qo'shilsa) ataylab kiritilgan
+// QISMAN to'lov (qarz uchun) endi ustidan qayta yozilmaydi.
 const paidAmountTouched = ref(false)
 const mixedTouched = ref(false)
 
@@ -906,68 +959,6 @@ function selectPaymentType(type: string) {
   }
 }
 
-function onManualEdit(field: 'paidAmount' | 'mixedCash' | 'mixedCard') {
-  if (field === 'paidAmount') paidAmountTouched.value = true
-  else mixedTouched.value = true
-}
-
-function openPaymentDialog() {
-  if (!cart.value.length) return
-  if (!paidAmountTouched.value) paidAmount.value = grandTotal.value
-  if (!mixedTouched.value) {
-    mixedCash.value = grandTotal.value
-    mixedCard.value = 0
-  }
-  paymentDialog.value = true
-}
-
-// ─────────────────────────── Raqamli panel ───────────────────────────
-const activeAmountField = ref<'paidAmount' | 'mixedCash' | 'mixedCard'>('paidAmount')
-const keypadFresh = ref(true)
-
-function setActiveField(field: 'paidAmount' | 'mixedCash' | 'mixedCard') {
-  activeAmountField.value = field
-  keypadFresh.value = true
-}
-
-function getActiveValue(): number {
-  if (activeAmountField.value === 'paidAmount') return paidAmount.value
-  if (activeAmountField.value === 'mixedCash') return mixedCash.value
-  return mixedCard.value
-}
-
-function setActiveValue(v: number) {
-  if (activeAmountField.value === 'paidAmount') {
-    paidAmount.value = v
-    paidAmountTouched.value = true
-  } else if (activeAmountField.value === 'mixedCash') {
-    mixedCash.value = v
-    mixedTouched.value = true
-  } else {
-    mixedCard.value = v
-    mixedTouched.value = true
-  }
-}
-
-function pressKey(key: string) {
-  if (key === '⌫') {
-    const current = String(getActiveValue())
-    const next = current.slice(0, -1)
-    setActiveValue(next ? Number(next) : 0)
-    keypadFresh.value = false
-    return
-  }
-  const current = keypadFresh.value ? '' : String(getActiveValue() || '')
-  const next = current + key
-  setActiveValue(Number(next) || 0)
-  keypadFresh.value = false
-}
-
-function pressClear() {
-  setActiveValue(0)
-  keypadFresh.value = false
-}
-
 const effectivePaid = computed(() =>
   paymentType.value === 'mixed'
     ? (Number(mixedCash.value) || 0) + (Number(mixedCard.value) || 0)
@@ -976,6 +967,90 @@ const effectivePaid = computed(() =>
 
 const changeAmount = computed(() => Math.max(effectivePaid.value - grandTotal.value, 0))
 const debtAmount = computed(() => Math.max(grandTotal.value - effectivePaid.value, 0))
+
+// ─────────────────────────── Raqamli panel (istalgan faol maydonga yozadi) ───────────────────────────
+interface NumericTarget {
+  label: string
+  get: () => number
+  set: (v: number) => void
+}
+const activeTarget = ref<NumericTarget | null>(null)
+const keypadFresh = ref(true)
+const activeTargetLabel = computed(() => (activeTarget.value ? activeTarget.value.label : 'Maydon tanlanmagan'))
+
+function bindTarget(target: NumericTarget) {
+  activeTarget.value = target
+  keypadFresh.value = true
+}
+
+function targetPaidAmount() {
+  bindTarget({
+    label: 'Berilgan summa',
+    get: () => paidAmount.value,
+    set: v => { paidAmount.value = v; paidAmountTouched.value = true },
+  })
+}
+function targetMixedCash() {
+  bindTarget({
+    label: 'Naqd',
+    get: () => mixedCash.value,
+    set: v => { mixedCash.value = v; mixedTouched.value = true },
+  })
+}
+function targetMixedCard() {
+  bindTarget({
+    label: 'Karta',
+    get: () => mixedCard.value,
+    set: v => { mixedCard.value = v; mixedTouched.value = true },
+  })
+}
+function targetOverallDiscount() {
+  bindTarget({
+    label: 'Umumiy chegirma',
+    get: () => overallDiscountValue.value,
+    set: v => { overallDiscountValue.value = v },
+  })
+}
+function targetLineQuantity(line: CartLine) {
+  bindTarget({
+    label: `${line.name} — miqdor`,
+    get: () => line.quantity,
+    set: v => { line.quantity = v; clampQty(line) },
+  })
+}
+function targetLineAmount(line: CartLine) {
+  bindTarget({
+    label: `${line.name} — summa`,
+    get: () => grossAmount(line),
+    set: v => onAmountInput(line, v),
+  })
+}
+function targetLineDiscount(line: CartLine) {
+  bindTarget({
+    label: `${line.name} — chegirma %`,
+    get: () => line.discountPercent,
+    set: v => { line.discountPercent = v },
+  })
+}
+
+function pressKey(key: string) {
+  if (!activeTarget.value) return
+  if (key === '⌫') {
+    const current = String(activeTarget.value.get())
+    const next = current.slice(0, -1)
+    activeTarget.value.set(next ? Number(next) : 0)
+    keypadFresh.value = false
+    return
+  }
+  const current = keypadFresh.value ? '' : String(activeTarget.value.get() || '')
+  activeTarget.value.set(Number(current + key) || 0)
+  keypadFresh.value = false
+}
+
+function pressClear() {
+  activeTarget.value?.set(0)
+  keypadFresh.value = false
+}
 
 // ─────────────────────────── Mijoz ───────────────────────────
 const customerId = ref<number | null>(null)
@@ -1012,32 +1087,6 @@ async function createCustomer() {
   }
 }
 
-// ─────────────────────────── Vaqtincha saqlash (hold sale) ───────────────────────────
-const heldSales = ref<HeldSale[]>([])
-
-function holdSale() {
-  if (!cart.value.length) return
-  heldSales.value.push({
-    id: Date.now(),
-    cart: JSON.parse(JSON.stringify(cart.value)),
-    total: grandTotal.value,
-    savedAt: new Date(),
-  })
-  clearCart()
-  toastStore.success('Savat vaqtincha saqlandi')
-}
-
-function resumeHeld(id: number) {
-  const held = heldSales.value.find(h => h.id === id)
-  if (!held) return
-  cart.value = held.cart
-  heldSales.value = heldSales.value.filter(h => h.id !== id)
-}
-
-function discardHeld(id: number) {
-  heldSales.value = heldSales.value.filter(h => h.id !== id)
-}
-
 // ─────────────────────────── So'nggi cheklar ───────────────────────────
 const recentOrders = ref<Order[]>([])
 async function loadRecent() {
@@ -1063,10 +1112,6 @@ function formatDate(value: string) {
   })
 }
 
-function orderPayloadTotal(payload: any) {
-  return payload?.paidAmount ?? 0
-}
-
 // ─────────────────────────── Checkout ───────────────────────────
 const checkingOut = ref(false)
 const receiptDialog = ref(false)
@@ -1079,15 +1124,6 @@ async function checkout() {
   if (debtAmount.value > 0 && !customerId.value) {
     toastStore.error('Qarz uchun mijoz tanlanishi shart')
     return
-  }
-
-  if (paymentType.value === 'mixed') {
-    const sum = (Number(mixedCash.value) || 0) + (Number(mixedCard.value) || 0)
-    if (sum > grandTotal.value + 0.05 && Number(mixedCard.value) > 0) {
-      // karta orqali "qaytim" bo'lmaydi, faqat naqdda bo'ladi — ogohlantiramiz
-      toastStore.error("Karta orqali ortiqcha to'lov kiritilmasin, faqat naqd uchun qaytim hisoblanadi")
-      return
-    }
   }
 
   checkingOut.value = true
@@ -1129,10 +1165,9 @@ async function checkout() {
         debtAmount: debtAmount.value,
         offline: true,
       } as any
-      paymentDialog.value = false
       receiptDialog.value = true
       toastStore.success('Chek oflayn saqlandi')
-      clearCart()
+      emptyActiveBasket()
       loadList(listPage.value)
       return
     }
@@ -1140,11 +1175,10 @@ async function checkout() {
     const order = await ordersStore.createOrder(payload)
 
     lastOrder.value = order
-    paymentDialog.value = false
     receiptDialog.value = true
     toastStore.success('Chek muvaffaqiyatli yakunlandi')
 
-    clearCart()
+    emptyActiveBasket()
     loadList(listPage.value)
     loadRecent()
   } catch (error: any) {
@@ -1169,11 +1203,11 @@ function onKeydown(e: KeyboardEvent) {
     topSearchRef.value?.focus?.()
   } else if (e.key === 'F4') {
     e.preventDefault()
-    openPaymentDialog()
+    checkout()
   } else if (e.key === 'Escape') {
-    if (newCustomerDialog.value || receiptDialog.value || paymentDialog.value || pendingDialog.value) return
+    if (newCustomerDialog.value || receiptDialog.value || pendingDialog.value) return
     e.preventDefault()
-    if (cart.value.length) clearCart()
+    if (cart.value.length) emptyActiveBasket()
   }
 }
 
@@ -1186,7 +1220,7 @@ watch(isOnline, async online => {
     loadList(listPage.value)
     loadRecent()
   } else {
-    toastStore.error("Internet uzildi — oflayn rejimda davom etilmoqda")
+    toastStore.error('Internet uzildi — oflayn rejimda davom etilmoqda')
   }
 })
 
@@ -1231,11 +1265,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .pos-keypad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: 8px;
 
   &__btn {
-    min-height: 44px;
-    font-size: 1rem;
+    min-height: 48px;
+    font-size: 1.05rem;
   }
 
   &__btn--clear {

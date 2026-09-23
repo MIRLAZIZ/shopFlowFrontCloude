@@ -38,6 +38,14 @@ export const useOfflineStore = defineStore('offline', {
       }
     },
 
+    async cacheDebts(debts: any[]) {
+      try {
+        await offlineDb.putAll('debts', debts)
+      } catch (e) {
+        console.error('offline: qarzlarni keshlashda xato', e)
+      }
+    },
+
     async getCachedProducts(): Promise<any[]> {
       try {
         return await offlineDb.getAll('products')
@@ -49,6 +57,14 @@ export const useOfflineStore = defineStore('offline', {
     async getCachedCustomers(): Promise<any[]> {
       try {
         return await offlineDb.getAll('customers')
+      } catch {
+        return []
+      }
+    },
+
+    async getCachedDebts(): Promise<any[]> {
+      try {
+        return await offlineDb.getAll('debts')
       } catch {
         return []
       }
