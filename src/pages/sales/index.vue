@@ -25,56 +25,31 @@
           Kassir: <strong>{{ cashierName }}</strong>
         </span>
       </div>
-
-      <div class="d-flex align-center gap-2 text-caption text-medium-emphasis">
-        <VChip size="small" variant="tonal"><kbd>F2</kbd>&nbsp;Qidirish</VChip>
-        <VChip size="small" variant="tonal"><kbd>F4</kbd>&nbsp;To'lash</VChip>
-        <VChip size="small" variant="tonal"><kbd>Esc</kbd>&nbsp;Bekor qilish</VChip>
-      </div>
     </div>
 
-    <!-- ═══════════════ QIDIRUV + BARCODE ═══════════════ -->
-    <VRow class="mb-2">
-      <VCol cols="12" sm="7">
-        <div class="position-relative">
-          <VTextField
-            ref="nameSearchRef"
-            v-model="nameQuery"
-            placeholder="Mahsulot nomi yoki qisqa kod bilan qidirish..."
-            prepend-inner-icon="tabler-search"
-            density="comfortable"
-            clearable
-            @update:model-value="onNameQueryChange"
-            @keydown.enter="onNameEnter"
-          />
-          <VCard v-if="nameResults.length" class="pos-dropdown" elevation="6">
-            <VList density="compact">
-              <VListItem
-                v-for="p in nameResults"
-                :key="p.id"
-                :title="p.name"
-                :subtitle="`${formatMoney(p.selling_price)} so'm • qoldiq: ${p.quantity}`"
-                :disabled="p.quantity <= 0"
-                @click="pickFromDropdown(p)"
-              />
-            </VList>
-          </VCard>
-        </div>
-      </VCol>
-      <VCol cols="12" sm="5">
-        <VTextField
-          ref="barcodeInputRef"
-          v-model="barcodeQuery"
-          placeholder="Barcode skanerlang..."
-          prepend-inner-icon="tabler-barcode"
-          density="comfortable"
-          variant="outlined"
-          class="pos-barcode-input"
-          @keydown.enter="onBarcodeEnter"
-          @blur="refocusBarcodeSoon"
-        />
-      </VCol>
-    </VRow>
+    <!-- ═══════════════ BARCODE (yuqorida, doim fokusda) + QIDIRUV ═══════════════ -->
+    <VTextField
+      ref="barcodeInputRef"
+      v-model="barcodeQuery"
+      placeholder="Shtrix kod bo'yicha qidirish yoki skanerlang..."
+      prepend-inner-icon="tabler-barcode"
+      density="comfortable"
+      variant="outlined"
+      class="pos-barcode-input mb-2"
+      @keydown.enter="onBarcodeEnter"
+      @blur="refocusBarcodeSoon"
+    />
+    <VTextField
+      ref="nameSearchRef"
+      v-model="nameQuery"
+      placeholder="Mahsulot nomi yoki qisqa kod bilan qidirish..."
+      prepend-inner-icon="tabler-search"
+      density="comfortable"
+      clearable
+      class="mb-3"
+      @update:model-value="onNameQueryChange"
+      @keydown.enter="onNameEnter"
+    />
 
     <!-- ═══════════════ SAVAT TABLARI ═══════════════ -->
     <div class="d-flex align-center gap-2 mb-3 flex-wrap">
@@ -118,12 +93,34 @@
           </template>
 
           <VCardText>
-            <p v-if="!cart.length" class="text-medium-emphasis text-center py-10">
-              Savat bo'sh — yuqoridan mahsulot qidiring yoki barcode skanerlang
-            </p>
+            <!-- Qidiruv faol bo'lsa — natijalar shu ro'yxatda, savat o'rnida ko'rinadi -->
+            <template v-if="nameQuery.trim()">
+              <div v-if="nameResults.length" class="pos-cart-lines">
+                <div
+                  v-for="p in nameResults"
+                  :key="p.id"
+                  class="pos-search-row"
+                  :class="{ 'pos-search-row--disabled': p.quantity <= 0 }"
+                  @click="pickFromDropdown(p)"
+                >
+                  <span class="text-caption text-medium-emphasis">{{ p.barcode || p.quick_code || '-' }}</span>
+                  <span class="font-weight-medium">{{ p.name }}</span>
+                  <VChip size="small" variant="tonal" :color="p.quantity <= 0 ? 'error' : 'success'">
+                    {{ p.quantity }}
+                  </VChip>
+                  <span class="text-end">{{ formatMoney(p.selling_price) }} so'm</span>
+                </div>
+              </div>
+              <p v-else class="text-medium-emphasis text-center py-10">Hech narsa topilmadi</p>
+            </template>
 
-            <div v-else class="pos-cart-lines">
-              <div v-for="line in cart" :key="line.productId" class="pos-cart-line">
+            <template v-else>
+              <p v-if="!cart.length" class="text-medium-emphasis text-center py-10">
+                Mahsulot nomini tanlang yoki shtrix-kodni skanerlang yoki qo'lda kiriting
+              </p>
+
+              <div v-else class="pos-cart-lines">
+                <div v-for="line in cart" :key="line.productId" class="pos-cart-line">
                 <div class="pos-cart-line__info">
                   <div class="text-body-2 font-weight-medium">{{ line.name }}</div>
                   <div class="text-caption text-medium-emphasis">
@@ -188,6 +185,7 @@
                 </IconBtn>
               </div>
             </div>
+            </template>
 
             <VDivider class="my-4" />
 
@@ -282,6 +280,14 @@
               >
                 +{{ n }}
               </VBtn>
+            </div>
+
+            <VDivider class="my-3" />
+
+            <div class="d-flex flex-wrap gap-2">
+              <VChip size="small" variant="tonal"><kbd>F2</kbd>&nbsp;Qidirish</VChip>
+              <VChip size="small" variant="tonal"><kbd>F4</kbd>&nbsp;To'lash</VChip>
+              <VChip size="small" variant="tonal"><kbd>Esc</kbd>&nbsp;Bekor qilish</VChip>
             </div>
           </VCardText>
         </VCard>
@@ -1202,18 +1208,30 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <style lang="scss" scoped>
-.pos-dropdown {
-  position: absolute;
-  z-index: 20;
-  inset-inline: 0;
-  margin-block-start: 4px;
-  max-block-size: 320px;
-  overflow-y: auto;
-}
-
 .pos-barcode-input :deep(fieldset) {
   border-width: 2px;
   border-color: rgb(var(--v-theme-primary));
+}
+
+.pos-search-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding-block: 10px;
+  border-block-end: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover {
+    background-color: rgba(var(--v-theme-primary), 0.06);
+  }
+
+  &--disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    pointer-events: none;
+  }
 }
 
 .pos-cart-lines {
