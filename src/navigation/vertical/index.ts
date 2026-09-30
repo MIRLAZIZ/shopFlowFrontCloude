@@ -47,6 +47,13 @@ export default [
     subject: 'Dashboard'
   },
   {
+    title: 'Cheklar',
+    to: { name: 'receipts' },
+    icon: { icon: 'tabler-receipt' },
+    action: 'read',
+    subject: 'Dashboard'
+  },
+  {
     title: 'Mijozlar',
     to: { name: 'customers' },
     icon: { icon: 'tabler-users-group' },
