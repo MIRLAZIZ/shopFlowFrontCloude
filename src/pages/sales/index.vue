@@ -38,7 +38,6 @@
         variant="outlined"
         class="pos-barcode-input"
         @keydown.enter="onBarcodeEnter"
-        @blur="refocusBarcodeSoon"
       />
 
       <VChip
@@ -150,7 +149,7 @@
                     class="pos-cart-line__discount"
                     @click="targetLineDiscount(line)"
                   >
-                    {{ line.discountPercent.toFixed(0) }}%
+                    {{ formatMoney(line.discount) }}
                   </VBtn>
 
                   <IconBtn size="small" @click="removeFromCart(line.productId)">
@@ -173,6 +172,7 @@
               class="mb-2"
               @update:model-value="onNameQueryChange"
               @keydown.enter="onNameEnter"
+              @blur="focusBarcodeSoon"
             />
             <VTable v-if="nameQuery.trim() && nameResults.length" density="compact" class="pos-mini-table mb-2">
               <tbody>
@@ -596,7 +596,7 @@ interface CartLine {
   name: string
   price: number
   quantity: number
-  discountPercent: number
+  discount: number
   availableQuantity: number
 }
 
@@ -605,7 +605,6 @@ interface Basket {
   label: string
   cart: CartLine[]
   overallDiscountValue: number
-  overallDiscountType: 'percent' | 'amount'
   note: string
 }
 
@@ -643,7 +642,6 @@ function makeBasket(id: number): Basket {
     label: `Savat ${id}`,
     cart: [],
     overallDiscountValue: 0,
-    overallDiscountType: 'percent',
     note: '',
   }
 }
@@ -696,10 +694,6 @@ const cart = computed({
 const overallDiscountValue = computed({
   get: () => activeBasket.value.overallDiscountValue,
   set: v => { activeBasket.value.overallDiscountValue = v },
-})
-const overallDiscountType = computed({
-  get: () => activeBasket.value.overallDiscountType,
-  set: v => { activeBasket.value.overallDiscountType = v },
 })
 
 // ─────────────────────────── Oflayn kesh ───────────────────────────
@@ -769,12 +763,10 @@ const barcodeQuery = ref('')
 function focusBarcode() {
   nextTick(() => barcodeInputRef.value?.focus?.())
 }
-function refocusBarcodeSoon() {
-  setTimeout(() => {
-    if (!document.activeElement || document.activeElement === document.body) {
-      focusBarcode()
-    }
-  }, 400)
+// Boshqa maydondan (nomi bo'yicha qidiruv, klaviatura amali) chiqilgach,
+// skaner har doim tayyor turishi uchun fokus barcode'ga qaytariladi.
+function focusBarcodeSoon() {
+  setTimeout(() => focusBarcode(), 150)
 }
 
 async function onBarcodeEnter() {
@@ -839,7 +831,7 @@ function addToCart(product: Product) {
       name: product.name,
       price: product.selling_price ?? 0,
       quantity: 1,
-      discountPercent: 0,
+      discount: 0,
       availableQuantity: availableQty,
     }
     cart.value = [...cart.value, line]
@@ -882,7 +874,7 @@ function onAmountInput(line: CartLine, value: number | string) {
 }
 
 function lineDiscountAmount(line: CartLine) {
-  return round2((line.price * line.quantity * (line.discountPercent || 0)) / 100)
+  return Math.min(Math.max(line.discount || 0, 0), grossAmount(line))
 }
 
 function round2(value: number) {
@@ -899,9 +891,6 @@ const lineDiscountsTotal = computed(() =>
 
 const overallDiscountAmount = computed(() => {
   const base = Math.max(subtotal.value - lineDiscountsTotal.value, 0)
-  if (overallDiscountType.value === 'percent') {
-    return round2((base * (overallDiscountValue.value || 0)) / 100)
-  }
   return Math.min(overallDiscountValue.value || 0, base)
 })
 
@@ -914,7 +903,7 @@ function formatQty(value: number) {
 }
 
 function resetAllDiscounts() {
-  cart.value.forEach(l => { l.discountPercent = 0 })
+  cart.value.forEach(l => { l.discount = 0 })
   overallDiscountValue.value = 0
   toastStore.success('Barcha chegirmalar bekor qilindi')
 }
@@ -1015,24 +1004,23 @@ function applyOp(op: '+' | '-' | '*' | '/') {
     onAmountInput(line, n)
   }
   pending.value = ''
+  focusBarcodeSoon()
 }
 
 function applyF6() {
-  // Umumiy chekdan chegirma — so'm miqdorida
-  overallDiscountType.value = 'amount'
+  // Umumiy chekdan chegirma — to'g'ridan-to'g'ri so'm miqdorida
   overallDiscountValue.value = pendingNumber()
   pending.value = ''
+  focusBarcodeSoon()
 }
 
 function applyF7() {
-  // Tanlangan mahsulotga chegirma — so'm miqdorida kiritiladi, ichida
-  // foizga aylantirib saqlanadi (backend hisob-kitobi foiz asosida ishlaydi)
+  // Tanlangan mahsulotga chegirma — to'g'ridan-to'g'ri so'm miqdorida
   const line = activeLine.value
   if (!line) return
-  const amount = pendingNumber()
-  const gross = grossAmount(line) || 1
-  line.discountPercent = Math.min(Math.max(round2((amount / gross) * 100), 0), 100)
+  line.discount = Math.min(Math.max(pendingNumber(), 0), grossAmount(line))
   pending.value = ''
+  focusBarcodeSoon()
 }
 
 // ─────────────────────────── To'lov ───────────────────────────
@@ -1219,6 +1207,49 @@ function formatMoney(value: number) {
 
 // ─────────────────────────── Hotkeys ───────────────────────────
 function onKeydown(e: KeyboardEvent) {
+  // Barcode, qidiruv va boshqa haqiqiy matn maydonlari fokusda bo'lsa —
+  // ularning odatiy yozuv xatti-harakatiga aralashmaymiz (masalan barcode
+  // qo'lda kiritilayotgan bo'lsa raqamlar o'sha yerga tushishi kerak).
+  const tag = (document.activeElement as HTMLElement)?.tagName
+  const isRealTextInput = tag === 'INPUT' || tag === 'TEXTAREA'
+
+  // Fizik klaviaturadan raqam/amal kiritish: faqat biror maydon (miqdor,
+  // narx, chegirma, naqd, karta) tanlangan va hech qanday matn maydoni
+  // fokusda bo'lmaganda ishlaydi (chunki tugma bosilganda fokus o'sha
+  // tugmaga o'tadi, matn maydoniga emas).
+  if (!isRealTextInput && activeTarget.value) {
+    if (/^[0-9]$/.test(e.key)) {
+      e.preventDefault()
+      pressKey(e.key)
+      return
+    }
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      pressKey('⌫')
+      return
+    }
+    if (e.key === '+') {
+      e.preventDefault()
+      applyOp('+')
+      return
+    }
+    if (e.key === '-') {
+      e.preventDefault()
+      applyOp('-')
+      return
+    }
+    if (e.key === '*') {
+      e.preventDefault()
+      applyOp('*')
+      return
+    }
+    if (e.key === '/') {
+      e.preventDefault()
+      applyOp('/')
+      return
+    }
+  }
+
   if (e.key === 'F2') {
     e.preventDefault()
     nameSearchRef.value?.focus?.()
@@ -1262,10 +1293,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 <style lang="scss" scoped>
 .pos-barcode-input {
-  inline-size: 220px;
+  inline-size: 150px;
+
+  :deep(.v-field) {
+    font-size: 0.85rem;
+  }
 
   :deep(fieldset) {
-    border-width: 2px;
+    border-width: 1px;
     border-color: rgb(var(--v-theme-primary));
   }
 }
