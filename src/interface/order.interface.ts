@@ -5,10 +5,26 @@ export interface OrderItem {
     purchase_price?: number
     discount: number
     total: number
+    returnedQuantity?: number
     product: {
         id: number
         name: string
     }
+}
+
+export interface OrderReturn {
+    id: number
+    totalRefundAmount: number
+    appliedToDebt: number
+    cashRefundAmount: number
+    reason: string | null
+    createdAt: string
+    items: {
+        productId: number
+        productName: string
+        quantity: number
+        refundAmount: number
+    }[]
 }
 
 export interface Order {

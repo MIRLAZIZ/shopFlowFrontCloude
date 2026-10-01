@@ -148,12 +148,90 @@
             </div>
             <div class="pos-receipt__footer">Xaridingiz uchun rahmat!</div>
           </div>
+
+          <!-- Avval qilingan qaytarishlar -->
+          <div v-if="orderReturns.length" class="pos-no-print mt-4">
+            <VDivider class="mb-2" />
+            <div class="text-caption text-medium-emphasis mb-1">Qaytarishlar tarixi</div>
+            <div v-for="r in orderReturns" :key="r.id" class="text-caption mb-2">
+              <div class="d-flex justify-space-between">
+                <span>{{ formatDate(r.createdAt) }}</span>
+                <span class="font-weight-medium">{{ formatMoney(r.totalRefundAmount) }} so'm</span>
+              </div>
+              <div v-for="it in r.items" :key="it.productId" class="text-medium-emphasis">
+                {{ it.productName }} — {{ formatQty(it.quantity) }} dona ({{ formatMoney(it.refundAmount) }} so'm)
+              </div>
+            </div>
+          </div>
         </VCardText>
         <VCardText class="d-flex justify-end gap-2 pt-0 pos-no-print">
+          <VBtn
+            v-if="detailOrder.status === 'completed' && hasReturnableItems"
+            variant="tonal"
+            color="warning"
+            prepend-icon="tabler-rotate"
+            @click="openReturn"
+          >
+            Qaytarish
+          </VBtn>
           <VBtn variant="tonal" prepend-icon="tabler-printer" @click="printReceipt">
             Chop etish
           </VBtn>
           <VBtn color="primary" @click="detailDialog = false">Yopish</VBtn>
+        </VCardText>
+      </VCard>
+    </VDialog>
+
+    <!-- Qisman qaytarish -->
+    <VDialog v-model="returnDialog" max-width="480">
+      <VCard title="Mahsulotlarni qaytarish">
+        <VCardText v-if="detailOrder">
+          <VTable density="compact" class="mb-3">
+            <thead>
+              <tr>
+                <th>Mahsulot</th>
+                <th class="text-end">Sotilgan</th>
+                <th class="text-end">Qaytarilgan</th>
+                <th style="width: 110px">Qaytariladi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in detailOrder.items" :key="item.id">
+                <td>{{ item.product.name }}</td>
+                <td class="text-end">{{ formatQty(item.quantity) }}</td>
+                <td class="text-end">{{ formatQty(item.returnedQuantity || 0) }}</td>
+                <td>
+                  <VTextField
+                    v-model.number="returnQty[item.id]"
+                    type="number"
+                    density="compact"
+                    hide-details
+                    min="0"
+                    :max="remainingQty(item)"
+                    :disabled="remainingQty(item) <= 0"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </VTable>
+
+          <AppTextField v-model="returnReason" label="Sababi (ixtiyoriy)" class="mb-3" />
+
+          <div class="d-flex justify-space-between text-body-2">
+            <span class="text-medium-emphasis">Qaytariladigan summa:</span>
+            <span class="font-weight-medium">{{ formatMoney(returnPreviewAmount) }} so'm</span>
+          </div>
+        </VCardText>
+        <VCardText class="d-flex justify-end gap-2">
+          <VBtn variant="tonal" @click="returnDialog = false">Bekor qilish</VBtn>
+          <VBtn
+            color="warning"
+            :disabled="!hasAnyReturnQty"
+            :loading="returning"
+            @click="confirmReturn"
+          >
+            Qaytarish
+          </VBtn>
         </VCardText>
       </VCard>
     </VDialog>
@@ -179,7 +257,7 @@
 <script lang="ts" setup>
 import { useOrdersStore } from '@/@core/stores/orders'
 import { useToastStore } from '@/@core/stores/toast.store'
-import { Order } from '@/interface/order.interface'
+import { Order, OrderItem, OrderReturn } from '@/interface/order.interface'
 import { useDebounceFn } from '@vueuse/core'
 
 definePage({
@@ -241,10 +319,12 @@ const debouncedSearch = useDebounceFn(() => refresh(1), 400)
 // ─────────────────────────── Tafsilot ───────────────────────────
 const detailDialog = ref(false)
 const detailOrder = ref<Order | null>(null)
+const orderReturns = ref<OrderReturn[]>([])
 
 async function openDetail(id: number) {
   try {
     detailOrder.value = await ordersStore.fetchOrder(id)
+    orderReturns.value = await ordersStore.fetchOrderReturns(id)
     detailDialog.value = true
   } catch (error: any) {
     toastStore.error(error?.data?.message || error?.response?._data?.message || 'Xatolik')
@@ -253,6 +333,80 @@ async function openDetail(id: number) {
 
 function printReceipt() {
   nextTick(() => window.print())
+}
+
+// ─────────────────────────── Qisman qaytarish ───────────────────────────
+const returnDialog = ref(false)
+const returnQty = reactive<Record<number, number>>({})
+const returnReason = ref('')
+const returning = ref(false)
+
+function remainingQty(item: OrderItem): number {
+  return Math.max(round2(item.quantity - (item.returnedQuantity || 0)), 0)
+}
+
+const hasReturnableItems = computed(() =>
+  (detailOrder.value?.items ?? []).some(item => remainingQty(item) > 0),
+)
+
+function openReturn() {
+  if (!detailOrder.value) return
+  for (const item of detailOrder.value.items) {
+    returnQty[item.id] = 0
+  }
+  returnReason.value = ''
+  returnDialog.value = true
+}
+
+const hasAnyReturnQty = computed(() => Object.values(returnQty).some(v => Number(v) > 0))
+
+// Qaytariladigan summani oldindan ko'rsatish uchun — chegirma hisobga
+// olingan narx asosida taxminiy hisoblanadi (backend yakuniy summani
+// o'zi aniq hisoblaydi)
+const returnPreviewAmount = computed(() => {
+  if (!detailOrder.value) return 0
+  let total = 0
+  for (const item of detailOrder.value.items) {
+    const qty = Number(returnQty[item.id]) || 0
+    if (qty <= 0) continue
+    const unitNet = item.quantity > 0 ? (item.total / item.quantity) : 0
+    total += unitNet * qty
+  }
+  return round2(total)
+})
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100
+}
+
+async function confirmReturn() {
+  if (!detailOrder.value) return
+  const items = Object.entries(returnQty)
+    .filter(([, qty]) => Number(qty) > 0)
+    .map(([orderItemId, qty]) => ({ orderItemId: Number(orderItemId), quantity: Number(qty) }))
+
+  if (!items.length) return
+
+  returning.value = true
+  try {
+    const result = await ordersStore.createReturn(detailOrder.value.id, {
+      items,
+      reason: returnReason.value || undefined,
+    })
+    toastStore.success(
+      `Qaytarildi: ${formatMoney(result.totalRefundAmount)} so'm` +
+      (result.appliedToDebt > 0 ? ` (${formatMoney(result.appliedToDebt)} so'm qarzdan ayirildi)` : ''),
+    )
+    returnDialog.value = false
+    // Chekni yangilab, qolgan miqdorlarni to'g'rilaymiz
+    detailOrder.value = await ordersStore.fetchOrder(detailOrder.value.id)
+    orderReturns.value = await ordersStore.fetchOrderReturns(detailOrder.value.id)
+    refresh(page.value)
+  } catch (error: any) {
+    toastStore.error(error?.data?.message || error?.response?._data?.message || 'Xatolik')
+  } finally {
+    returning.value = false
+  }
 }
 
 // ─────────────────────────── Bekor qilish ───────────────────────────

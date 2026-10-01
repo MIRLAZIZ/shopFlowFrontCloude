@@ -57,5 +57,20 @@ export const useOrdersStore = defineStore('orders', {
         body: { reason },
       })
     },
+
+    // Qisman qaytarish: bitta chekdagi ayrim mahsulotlarni, kerakli
+    // miqdorda qaytarish (butun chekni bekor qilmasdan)
+    async createReturn(orderId: number, payload: { items: { orderItemId: number; quantity: number }[]; reason?: string }) {
+      const response: { data: any } = await $api(`/orders/${orderId}/returns`, {
+        method: 'post',
+        body: payload,
+      })
+      return response.data
+    },
+
+    async fetchOrderReturns(orderId: number) {
+      const response: { data: any[] } = await $api(`/orders/${orderId}/returns`)
+      return response.data
+    },
   },
 })
