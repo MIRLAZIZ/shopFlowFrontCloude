@@ -54,6 +54,13 @@ export default [
     subject: 'Dashboard'
   },
   {
+    title: 'Kuzatuv jurnali',
+    to: { name: 'audit-logs' },
+    icon: { icon: 'tabler-history' },
+    action: 'read',
+    subject: 'Dashboard'
+  },
+  {
     title: 'Mijozlar',
     to: { name: 'customers' },
     icon: { icon: 'tabler-users-group' },
