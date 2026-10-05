@@ -61,6 +61,13 @@ export default [
     subject: 'Dashboard'
   },
   {
+    title: 'Inventarizatsiya',
+    to: { name: 'inventory' },
+    icon: { icon: 'tabler-clipboard-list' },
+    action: 'read',
+    subject: 'Dashboard'
+  },
+  {
     title: 'Mijozlar',
     to: { name: 'customers' },
     icon: { icon: 'tabler-users-group' },
