@@ -68,6 +68,13 @@ export default [
     subject: 'Dashboard'
   },
   {
+    title: 'Statistika',
+    to: { name: 'statistics' },
+    icon: { icon: 'tabler-chart-bar' },
+    action: 'read',
+    subject: 'Dashboard'
+  },
+  {
     title: 'Mijozlar',
     to: { name: 'customers' },
     icon: { icon: 'tabler-users-group' },
