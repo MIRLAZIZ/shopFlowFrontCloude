@@ -42,6 +42,7 @@ declare module 'vue-router/auto/routes' {
     'root': RouteRecordInfo<'root', '/', Record<never, never>, Record<never, never>>,
     '$error': RouteRecordInfo<'$error', '/:error(.*)', { error: ParamValue<true> }, { error: ParamValue<false> }>,
     'audit-logs': RouteRecordInfo<'audit-logs', '/audit-logs', Record<never, never>, Record<never, never>>,
+    'barcode-generator': RouteRecordInfo<'barcode-generator', '/barcode-generator', Record<never, never>, Record<never, never>>,
     'categories': RouteRecordInfo<'categories', '/categories', Record<never, never>, Record<never, never>>,
     'customers': RouteRecordInfo<'customers', '/customers', Record<never, never>, Record<never, never>>,
     'debts': RouteRecordInfo<'debts', '/debts', Record<never, never>, Record<never, never>>,

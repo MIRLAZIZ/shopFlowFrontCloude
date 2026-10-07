@@ -51,7 +51,8 @@
     "vue3-perfect-scrollbar": "^1.6.1",
     "vue3-toastify": "^0.2.9",
     "vuetify": "3.3.22",
-    "webfontloader": "^1.6.28"
+    "webfontloader": "^1.6.28",
+    "jsbarcode": "^3.11.6"
   },
   "devDependencies": {
     "@antfu/eslint-config-vue": "^0.43.1",

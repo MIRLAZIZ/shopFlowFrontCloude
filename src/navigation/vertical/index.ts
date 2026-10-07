@@ -75,6 +75,13 @@ export default [
     subject: 'Dashboard'
   },
   {
+    title: 'Shtrix-kod yaratish',
+    to: { name: 'barcode-generator' },
+    icon: { icon: 'tabler-barcode' },
+    action: 'read',
+    subject: 'Dashboard'
+  },
+  {
     title: 'Mijozlar',
     to: { name: 'customers' },
     icon: { icon: 'tabler-users-group' },

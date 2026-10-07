@@ -582,6 +582,7 @@ import { useToastStore } from '@/@core/stores/toast.store'
 import { $api } from '@/utils/api'
 import { Order } from '@/interface/order.interface'
 import { Product } from '@/interface/products.interface'
+import { decodeWeightBarcode } from '@/utils/weightBarcode'
 import { useDebounceFn, useOnline } from '@vueuse/core'
 
 definePage({
@@ -773,6 +774,33 @@ async function onBarcodeEnter() {
   const value = barcodeQuery.value?.trim()
   if (!value) return
 
+  // 🏷️ Vaznli shtrix-kod (masalan 5 kg piyoz qadog'i) bo'lsa — mahsulot
+  // ID va vazn to'g'ridan-to'g'ri kod ichidan o'qiladi, qidiruv shart emas
+  const decoded = decodeWeightBarcode(value)
+  if (decoded) {
+    try {
+      let product: Product | null = null
+      if (!isOnline.value) {
+        const cached = await offlineStore.getCachedProducts()
+        product = cached.find((p: any) => p.id === decoded.productId) ?? null
+      } else {
+        const res: any = await $api(`/products/${decoded.productId}`)
+        product = res?.data ?? null
+      }
+      if (!product) {
+        toastStore.error('Shtrix-koddagi mahsulot topilmadi')
+      } else {
+        addToCart(product, decoded.weightKg)
+        toastStore.success(`${product.name} — ${decoded.weightKg} kg qo'shildi`)
+      }
+    } catch {
+      toastStore.error('Shtrix-koddagi mahsulot topilmadi')
+    }
+    barcodeQuery.value = ''
+    focusBarcode()
+    return
+  }
+
   if (!isOnline.value) {
     const cached = await offlineStore.getCachedProducts()
     const match = cached.find((p: any) => p.barcode === value || p.quick_code === value)
@@ -809,7 +837,7 @@ async function onBarcodeEnter() {
 }
 
 // ─────────────────────────── Savat ───────────────────────────
-function addToCart(product: Product) {
+function addToCart(product: Product, exactQuantity?: number) {
   const availableQty = product.quantity ?? 0
   if (availableQty <= 0) {
     toastStore.error('Bu mahsulot omborda qolmagan')
@@ -818,19 +846,20 @@ function addToCart(product: Product) {
 
   const existing = cart.value.find(l => l.productId === product.id)
   if (existing) {
-    // Har safar skanerdan o'tkazilganda +1
-    if (existing.quantity + 1 > existing.availableQuantity) {
+    // Vaznli shtrix-kod skanerlansa — aniq vaznga QO'SHILADI, aks holda +1
+    const addQty = exactQuantity ?? 1
+    if (existing.quantity + addQty > existing.availableQuantity) {
       toastStore.error("Omborda shuncha mahsulot yo'q")
       return
     }
-    existing.quantity += 1
+    existing.quantity = round3(existing.quantity + addQty)
     targetLineQuantity(existing)
   } else {
     const line: CartLine = {
       productId: product.id,
       name: product.name,
       price: product.selling_price ?? 0,
-      quantity: 1,
+      quantity: exactQuantity ?? 1,
       discount: 0,
       availableQuantity: availableQty,
     }
