@@ -16,6 +16,8 @@ declare global {
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const avatarText: typeof import('./src/@core/utils/formatters')['avatarText']
   const betweenValidator: typeof import('./src/composables/validator')['betweenValidator']
+  const buildReceiptBytes: typeof import('./src/utils/escpos')['buildReceiptBytes']
+  const buildTestBytes: typeof import('./src/utils/escpos')['buildTestBytes']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -40,7 +42,9 @@ declare global {
   const customRef: typeof import('vue')['customRef']
   const debouncedRef: typeof import('@vueuse/core')['debouncedRef']
   const debouncedWatch: typeof import('@vueuse/core')['debouncedWatch']
+  const decodeReceiptBarcode: typeof import('./src/utils/weightBarcode')['decodeReceiptBarcode']
   const decodeWeightBarcode: typeof import('./src/utils/weightBarcode')['decodeWeightBarcode']
+  const defaultPrinterSettings: typeof import('./src/utils/escpos')['defaultPrinterSettings']
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
   const defineLoader: typeof import('vue-router/auto')['defineLoader']
@@ -49,9 +53,12 @@ declare global {
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const emailValidator: typeof import('./src/composables/validator')['emailValidator']
+  const encodeText: typeof import('./src/utils/escpos')['encodeText']
   const extendRef: typeof import('@vueuse/core')['extendRef']
   const formatDate: typeof import('./src/@core/utils/formatters')['formatDate']
   const formatDateToMonthShort: typeof import('./src/@core/utils/formatters')['formatDateToMonthShort']
+  const formatReceiptDate: typeof import('./src/utils/receipt')['formatReceiptDate']
+  const generateReceiptBarcode: typeof import('./src/utils/weightBarcode')['generateReceiptBarcode']
   const generateWeightBarcode: typeof import('./src/utils/weightBarcode')['generateWeightBarcode']
   const getActivePinia: typeof import('pinia')['getActivePinia']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
@@ -108,6 +115,7 @@ declare global {
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const passwordValidator: typeof import('./src/composables/validator')['passwordValidator']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
+  const paymentTypeLabel: typeof import('./src/utils/receipt')['paymentTypeLabel']
   const prefixWithPlus: typeof import('./src/@core/utils/formatters')['prefixWithPlus']
   const provide: typeof import('vue')['provide']
   const provideLocal: typeof import('@vueuse/core')['provideLocal']
@@ -118,6 +126,8 @@ declare global {
   const reactiveOmit: typeof import('@vueuse/core')['reactiveOmit']
   const reactivePick: typeof import('@vueuse/core')['reactivePick']
   const readonly: typeof import('vue')['readonly']
+  const receiptFromCart: typeof import('./src/utils/receipt')['receiptFromCart']
+  const receiptFromOrder: typeof import('./src/utils/receipt')['receiptFromOrder']
   const ref: typeof import('vue')['ref']
   const refAutoReset: typeof import('@vueuse/core')['refAutoReset']
   const refDebounced: typeof import('@vueuse/core')['refDebounced']
@@ -286,6 +296,7 @@ declare global {
   const usePreferredLanguages: typeof import('@vueuse/core')['usePreferredLanguages']
   const usePreferredReducedMotion: typeof import('@vueuse/core')['usePreferredReducedMotion']
   const usePrevious: typeof import('@vueuse/core')['usePrevious']
+  const usePrinter: typeof import('./src/composables/usePrinter')['usePrinter']
   const useProjection: typeof import('@vueuse/math')['useProjection']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
@@ -386,6 +397,8 @@ declare module 'vue' {
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly avatarText: UnwrapRef<typeof import('./src/@core/utils/formatters')['avatarText']>
     readonly betweenValidator: UnwrapRef<typeof import('./src/composables/validator')['betweenValidator']>
+    readonly buildReceiptBytes: UnwrapRef<typeof import('./src/utils/escpos')['buildReceiptBytes']>
+    readonly buildTestBytes: UnwrapRef<typeof import('./src/utils/escpos')['buildTestBytes']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -410,7 +423,9 @@ declare module 'vue' {
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
+    readonly decodeReceiptBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['decodeReceiptBarcode']>
     readonly decodeWeightBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['decodeWeightBarcode']>
+    readonly defaultPrinterSettings: UnwrapRef<typeof import('./src/utils/escpos')['defaultPrinterSettings']>
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly defineLoader: UnwrapRef<typeof import('vue-router/auto')['defineLoader']>
@@ -419,9 +434,12 @@ declare module 'vue' {
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly emailValidator: UnwrapRef<typeof import('./src/composables/validator')['emailValidator']>
+    readonly encodeText: UnwrapRef<typeof import('./src/utils/escpos')['encodeText']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters')['formatDate']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('./src/@core/utils/formatters')['formatDateToMonthShort']>
+    readonly formatReceiptDate: UnwrapRef<typeof import('./src/utils/receipt')['formatReceiptDate']>
+    readonly generateReceiptBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['generateReceiptBarcode']>
     readonly generateWeightBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['generateWeightBarcode']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
@@ -478,6 +496,7 @@ declare module 'vue' {
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly passwordValidator: UnwrapRef<typeof import('./src/composables/validator')['passwordValidator']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
+    readonly paymentTypeLabel: UnwrapRef<typeof import('./src/utils/receipt')['paymentTypeLabel']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
     readonly reactify: UnwrapRef<typeof import('@vueuse/core')['reactify']>
@@ -487,6 +506,8 @@ declare module 'vue' {
     readonly reactiveOmit: UnwrapRef<typeof import('@vueuse/core')['reactiveOmit']>
     readonly reactivePick: UnwrapRef<typeof import('@vueuse/core')['reactivePick']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
+    readonly receiptFromCart: UnwrapRef<typeof import('./src/utils/receipt')['receiptFromCart']>
+    readonly receiptFromOrder: UnwrapRef<typeof import('./src/utils/receipt')['receiptFromOrder']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly refAutoReset: UnwrapRef<typeof import('@vueuse/core')['refAutoReset']>
     readonly refDebounced: UnwrapRef<typeof import('@vueuse/core')['refDebounced']>
@@ -650,6 +671,7 @@ declare module 'vue' {
     readonly usePreferredLanguages: UnwrapRef<typeof import('@vueuse/core')['usePreferredLanguages']>
     readonly usePreferredReducedMotion: UnwrapRef<typeof import('@vueuse/core')['usePreferredReducedMotion']>
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
+    readonly usePrinter: UnwrapRef<typeof import('./src/composables/usePrinter')['usePrinter']>
     readonly useProjection: UnwrapRef<typeof import('@vueuse/math')['useProjection']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>

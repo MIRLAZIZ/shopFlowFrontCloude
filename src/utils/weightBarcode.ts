@@ -8,7 +8,7 @@
 // bilan to'qnashmaydi.
 //
 // Masalan: Piyoz (mahsulot ID=42), 5 kg (5000 gramm) qadoqlansa:
-//   21 | 00042 | 05000 | C  →  2100042050004 (C — tekshiruv raqami)
+//   21 | 00042 | 05000 | C  →  2100042050006 (oxirgi raqam — tekshiruv raqami)
 
 const PREFIX = '21'
 
@@ -56,4 +56,26 @@ export function decodeWeightBarcode(code: string): DecodedWeightBarcode | null {
   const weightGrams = Number(code.slice(7, 12))
 
   return { productId, weightGrams, weightKg: weightGrams / 1000 }
+}
+
+// ─────────────────────────── CHEK shtrix-kodi ───────────────────────────
+// Chek ostiga bosiladigan EAN-13: "22" + 10 xona chek raqami + tekshiruv raqami.
+// Skanerlansa — chek darhol topiladi (qaytarish, ko'rish uchun). Mahsulot
+// (prefiks 21) va tashqi shtrix-kodlar bilan to'qnashmaydi.
+const RECEIPT_PREFIX = '22'
+
+export function generateReceiptBarcode(orderId: number): string {
+  if (!Number.isInteger(orderId) || orderId <= 0 || orderId > 9999999999) {
+    throw new Error("Chek raqami noto'g'ri")
+  }
+  const digits12 = RECEIPT_PREFIX + String(orderId).padStart(10, '0')
+  return digits12 + String(ean13CheckDigit(digits12))
+}
+
+export function decodeReceiptBarcode(code: string): number | null {
+  if (!/^\d{13}$/.test(code)) return null
+  if (!code.startsWith(RECEIPT_PREFIX)) return null
+  if (ean13CheckDigit(code.slice(0, 12)) !== Number(code[12])) return null
+  const id = Number(code.slice(2, 12))
+  return id > 0 ? id : null
 }

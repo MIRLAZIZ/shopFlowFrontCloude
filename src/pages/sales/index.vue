@@ -21,6 +21,17 @@
           <span v-if="offlineStore.failedCount">, {{ offlineStore.failedCount }} xato</span>
         </VChip>
 
+        <VChip
+          :color="printerConnected ? 'success' : undefined"
+          size="small"
+          :variant="printerConnected ? 'flat' : 'tonal'"
+          class="cursor-pointer"
+          @click="printerDialog = true"
+        >
+          <VIcon start :icon="printerConnected ? 'tabler-printer' : 'tabler-printer-off'" size="14" />
+          {{ printerConnected ? 'Printer ulangan' : 'Printer ulanmagan' }}
+        </VChip>
+
         <span v-if="cashierName" class="text-medium-emphasis text-body-2">
           Kassir: <strong>{{ cashierName }}</strong>
         </span>
@@ -37,8 +48,12 @@
         density="compact"
         variant="outlined"
         class="pos-barcode-input"
-        @keydown.enter="onBarcodeEnter"
+        @keydown="onBarcodeKeydown"
       />
+      <span class="text-caption text-medium-emphasis pos-barcode-hint">
+        Raqam yozib: <kbd>+</kbd> qo'shish · <kbd>−</kbd> ayirish · <kbd>×</kbd> narx · <kbd>÷</kbd> summa→miqdor ·
+        <kbd>F6</kbd> umumiy / <kbd>F7</kbd> mahsulot chegirma
+      </span>
 
       <VChip
         v-for="b in baskets"
@@ -217,7 +232,6 @@
             </div>
 
             <VBtn
-              v-if="!paymentSectionOpen"
               block
               size="large"
               color="primary"
@@ -240,7 +254,7 @@
                   icon size="small"
                   :variant="autoPrint ? 'flat' : 'tonal'"
                   :color="autoPrint ? 'primary' : undefined"
-                  title="Avtomatik chek chiqarish"
+                  title="Avtomatik chek chiqarish (printer ulangan bo'lsa)"
                   @click="autoPrint = !autoPrint"
                 >
                   <VIcon icon="tabler-printer" size="18" />
@@ -317,137 +331,169 @@
             </div>
           </VCardText>
         </VCard>
-
-        <!-- ═══════════════ TO'LOV PANELI (yig'iladigan) ═══════════════ -->
-        <VCard v-if="paymentSectionOpen">
-          <VCardText>
-            <div class="d-flex justify-space-between mb-3">
-              <span class="text-medium-emphasis">To'lanadi:</span>
-              <span class="text-h6">{{ formatMoney(grandTotal) }} so'm</span>
-            </div>
-
-            <VTabs v-model="paymentTab" density="compact" class="mb-3">
-              <VTab value="pay">To'lov</VTab>
-              <VTab value="debt">
-                Qarz
-                <VChip v-if="debtAmount > 0" size="x-small" color="error" class="ml-1">
-                  {{ formatMoney(debtAmount) }}
-                </VChip>
-              </VTab>
-            </VTabs>
-
-            <div v-if="paymentTab === 'pay'">
-              <div class="text-caption text-medium-emphasis mb-1">Naqd</div>
-              <VBtn
-                block variant="tonal"
-                :color="isTarget(null, 'mixedCash') ? 'primary' : undefined"
-                class="mb-2"
-                @click="targetMixedCash()"
-              >
-                {{ formatMoney(mixedCash) }} so'm ✎
-              </VBtn>
-
-              <div class="text-caption text-medium-emphasis mb-1">Karta</div>
-              <div class="d-flex gap-1 mb-3">
-                <VBtn
-                  icon size="small" variant="tonal"
-                  title="Qolganini kartaga hisoblash"
-                  @click="autoFillCard"
-                >
-                  <VIcon icon="tabler-calculator" size="16" />
-                </VBtn>
-                <VBtn
-                  block variant="tonal"
-                  :color="isTarget(null, 'mixedCard') ? 'primary' : undefined"
-                  @click="targetMixedCard()"
-                >
-                  {{ formatMoney(mixedCard) }} so'm ✎
-                </VBtn>
-              </div>
-
-              <div class="d-flex justify-space-between mb-1 text-body-2">
-                <span class="text-medium-emphasis">To'landi:</span>
-                <span>{{ formatMoney(effectivePaid) }} so'm</span>
-              </div>
-              <div v-if="changeAmount > 0" class="d-flex justify-space-between mb-2 text-success">
-                <span>Qaytim:</span>
-                <span class="font-weight-medium">{{ formatMoney(changeAmount) }} so'm</span>
-              </div>
-              <div v-if="debtAmount > 0" class="d-flex justify-space-between mb-2 text-error">
-                <span>Qarz qoladi:</span>
-                <span class="font-weight-medium">{{ formatMoney(debtAmount) }} so'm</span>
-              </div>
-            </div>
-
-            <div v-else>
-              <p class="text-body-2 mb-3">
-                Qarz summasi: <strong class="text-error">{{ formatMoney(debtAmount) }} so'm</strong>
-                (Naqd + Karta jamidan qolgani avtomatik qarz bo'ladi)
-              </p>
-
-              <VAutocomplete
-                v-model="customerId"
-                v-model:search="customerSearch"
-                :items="customersStore.customers"
-                item-title="fullName"
-                item-value="id"
-                label="Mijoz"
-                :loading="customerLoading"
-                :disabled="!isOnline"
-                clearable
-                no-filter
-                density="compact"
-                class="mb-2"
-                @update:search="onCustomerSearch"
-              />
-
-              <VBtn
-                v-if="!newCustomerInline"
-                variant="tonal"
-                prepend-icon="tabler-user-plus"
-                size="small"
-                :disabled="!isOnline"
-                @click="newCustomerInline = true"
-              >
-                Yangi mijoz
-              </VBtn>
-
-              <div v-else class="mt-2">
-                <AppTextField v-model="newCustomer.fullName" label="Ism familiya" density="compact" class="mb-2" />
-                <AppTextField v-model="newCustomer.phone" label="Telefon" density="compact" class="mb-2" />
-                <div class="d-flex gap-2">
-                  <VBtn size="small" variant="tonal" @click="newCustomerInline = false">Bekor</VBtn>
-                  <VBtn size="small" color="primary" :disabled="!newCustomer.fullName" @click="createCustomer">
-                    Saqlash
-                  </VBtn>
-                </div>
-              </div>
-
-              <p v-if="!isOnline" class="text-caption text-warning mt-2">
-                Oflaynda faqat keshlangan mijozlardan tanlanadi
-              </p>
-            </div>
-
-            <VDivider class="my-3" />
-
-            <div class="d-flex gap-2">
-              <VBtn variant="tonal" @click="paymentSectionOpen = false">Yopish</VBtn>
-              <VBtn
-                block
-                size="large"
-                color="primary"
-                class="flex-grow-1"
-                :disabled="checkingOut"
-                :loading="checkingOut"
-                @click="checkout"
-              >
-                Yakunlash
-              </VBtn>
-            </div>
-          </VCardText>
-        </VCard>
       </VCol>
     </VRow>
+
+    <!-- ═══════════════ TO'LOV MODALI ═══════════════ -->
+    <VDialog v-model="paymentSectionOpen" max-width="520">
+      <VCard>
+        <VCardItem>
+          <VCardTitle>To'lov</VCardTitle>
+          <template #append>
+            <VBtn icon variant="text" size="small" @click="paymentSectionOpen = false">
+              <VIcon icon="tabler-x" />
+            </VBtn>
+          </template>
+        </VCardItem>
+
+        <VCardText>
+          <div class="d-flex justify-space-between align-center mb-3">
+            <span class="text-medium-emphasis">To'lanadi:</span>
+            <span class="text-h5 font-weight-bold">{{ formatMoney(grandTotal) }} so'm</span>
+          </div>
+
+          <VTabs v-model="paymentTab" density="compact" class="mb-4">
+            <VTab value="pay">To'lov</VTab>
+            <VTab value="debt">
+              Qarz
+              <VChip v-if="debtAmount > 0" size="x-small" color="error" class="ml-1">
+                {{ formatMoney(debtAmount) }}
+              </VChip>
+            </VTab>
+          </VTabs>
+
+          <div v-if="paymentTab === 'pay'">
+            <VTextField
+              ref="cashInputRef"
+              v-model.number="mixedCash"
+              type="number"
+              label="Naqd"
+              suffix="so'm"
+              variant="outlined"
+              class="mb-3"
+              @update:model-value="mixedTouched = true"
+              @keydown.enter.prevent="checkout"
+            />
+
+            <VTextField
+              v-model.number="mixedCard"
+              type="number"
+              label="Karta"
+              suffix="so'm"
+              variant="outlined"
+              class="mb-3"
+              @update:model-value="mixedTouched = true"
+              @keydown.enter.prevent="checkout"
+            >
+              <template #prepend>
+                <VBtn
+                  icon
+                  size="small"
+                  variant="tonal"
+                  color="primary"
+                  title="Qolgan summani kartaga hisoblash"
+                  @click="autoFillCard"
+                >
+                  <VIcon icon="tabler-calculator" size="18" />
+                </VBtn>
+              </template>
+            </VTextField>
+
+            <div class="d-flex gap-2 flex-wrap mb-4">
+              <VBtn size="small" variant="tonal" @click="fillAllCash">To'liq naqd</VBtn>
+              <VBtn size="small" variant="tonal" @click="fillAllCard">To'liq karta</VBtn>
+            </div>
+
+            <div class="d-flex justify-space-between mb-1 text-body-2">
+              <span class="text-medium-emphasis">To'landi:</span>
+              <span>{{ formatMoney(effectivePaid) }} so'm</span>
+            </div>
+            <div v-if="changeAmount > 0" class="d-flex justify-space-between mb-1 text-success">
+              <span>Qaytim:</span>
+              <span class="font-weight-medium">{{ formatMoney(changeAmount) }} so'm</span>
+            </div>
+            <div v-if="debtAmount > 0" class="d-flex justify-space-between mb-1 text-error">
+              <span>Qarz qoladi:</span>
+              <span class="font-weight-medium">{{ formatMoney(debtAmount) }} so'm</span>
+            </div>
+          </div>
+
+          <div v-else>
+            <p class="text-body-2 mb-3">
+              Qarz summasi: <strong class="text-error">{{ formatMoney(debtAmount) }} so'm</strong>
+              (Naqd + Karta jamidan qolgani avtomatik qarz bo'ladi)
+            </p>
+
+            <VAutocomplete
+              v-model="customerId"
+              v-model:search="customerSearch"
+              :items="customersStore.customers"
+              item-title="fullName"
+              item-value="id"
+              label="Mijoz"
+              variant="outlined"
+              :loading="customerLoading"
+              :disabled="!isOnline"
+              clearable
+              no-filter
+              class="mb-2"
+              @update:search="onCustomerSearch"
+            />
+
+            <VBtn
+              v-if="!newCustomerInline"
+              variant="tonal"
+              prepend-icon="tabler-user-plus"
+              size="small"
+              :disabled="!isOnline"
+              @click="newCustomerInline = true"
+            >
+              Yangi mijoz
+            </VBtn>
+
+            <div v-else class="mt-2">
+              <VTextField v-model="newCustomer.fullName" label="Ism familiya" variant="outlined" density="compact" class="mb-2" />
+              <VTextField v-model="newCustomer.phone" label="Telefon" variant="outlined" density="compact" class="mb-2" />
+              <div class="d-flex gap-2">
+                <VBtn size="small" variant="tonal" @click="newCustomerInline = false">Bekor</VBtn>
+                <VBtn size="small" color="primary" :disabled="!newCustomer.fullName" @click="createCustomer">
+                  Saqlash
+                </VBtn>
+              </div>
+            </div>
+
+            <p v-if="!isOnline" class="text-caption text-warning mt-2">
+              Oflaynda faqat keshlangan mijozlardan tanlanadi
+            </p>
+          </div>
+
+          <VDivider class="my-4" />
+
+          <VSwitch
+            v-model="autoPrint"
+            color="primary"
+            density="compact"
+            hide-details
+            label="Chekni avtomatik chop etish"
+            class="mb-4"
+          />
+
+          <div class="d-flex gap-2">
+            <VBtn variant="tonal" @click="paymentSectionOpen = false">Yopish</VBtn>
+            <VBtn
+              size="large"
+              color="primary"
+              class="flex-grow-1"
+              :disabled="checkingOut"
+              :loading="checkingOut"
+              @click="checkout"
+            >
+              Yakunlash
+            </VBtn>
+          </div>
+        </VCardText>
+      </VCard>
+    </VDialog>
 
     <!-- ═══════════════ SO'NGGI CHEKLAR ═══════════════ -->
     <VCard title="So'nggi cheklar" class="mt-6">
@@ -532,44 +578,30 @@
       </VCard>
     </VDialog>
 
-    <!-- Chek (yakunlangach) — chop etish uchun ham shu formatlanadi -->
-    <VDialog v-model="receiptDialog" max-width="360">
+    <!-- Chek (yakunlangach) -->
+    <VDialog v-model="receiptDialog" max-width="400" scrollable>
       <VCard>
-        <VCardText>
-          <div id="pos-receipt" class="pos-receipt">
-            <div class="pos-receipt__header">
-              <div class="pos-receipt__shop">{{ lastOrder?.offline ? "CHEK (OFLAYN — hali yuborilmagan)" : 'CHEK' }}</div>
-              <div class="pos-receipt__meta">
-                <span>#{{ lastOrder?.id || '—' }}</span>
-                <span>{{ receiptDate }}</span>
-              </div>
-            </div>
-            <div class="pos-receipt__divider">— — — — — — — — — — — — — — —</div>
-            <div v-for="line in receiptLines" :key="line.productId" class="pos-receipt__line">
-              <div>{{ line.name }}</div>
-              <div class="pos-receipt__line-sub">
-                <span>{{ formatQty(line.quantity) }} × {{ formatMoney(line.price) }}</span>
-                <span>{{ formatMoney(grossAmount(line) - lineDiscountAmount(line)) }}</span>
-              </div>
-            </div>
-            <div class="pos-receipt__divider">— — — — — — — — — — — — — — —</div>
-            <div class="pos-receipt__row"><span>Jami</span><span>{{ formatMoney(lastOrder?.total || 0) }} so'm</span></div>
-            <div class="pos-receipt__row"><span>To'landi</span><span>{{ formatMoney(lastOrder?.paidAmount || 0) }} so'm</span></div>
-            <div v-if="(lastOrder?.debtAmount || 0) > 0" class="pos-receipt__row pos-receipt__row--debt">
-              <span>Qarz</span><span>{{ formatMoney(lastOrder?.debtAmount || 0) }} so'm</span>
-            </div>
-            <div class="pos-receipt__divider">— — — — — — — — — — — — — — —</div>
-            <div class="pos-receipt__footer">Xaridingiz uchun rahmat!</div>
-          </div>
+        <VCardText class="pb-0">
+          <ReceiptPreview :receipt="receipt" />
         </VCardText>
-        <VCardText class="d-flex justify-end gap-2 pt-0 pos-no-print">
-          <VBtn variant="tonal" prepend-icon="tabler-printer" @click="printReceipt">
+        <VCardText class="d-flex justify-end gap-2 flex-wrap">
+          <VBtn variant="text" prepend-icon="tabler-settings" @click="printerDialog = true">
+            Printer
+          </VBtn>
+          <VBtn
+            variant="tonal"
+            prepend-icon="tabler-printer"
+            :loading="printing"
+            @click="printCurrentReceipt"
+          >
             Chek chiqarish
           </VBtn>
           <VBtn color="primary" @click="receiptDialog = false">Yopish</VBtn>
         </VCardText>
       </VCard>
     </VDialog>
+
+    <PrinterSettingsDialog v-model="printerDialog" />
   </div>
 </template>
 
@@ -582,7 +614,12 @@ import { useToastStore } from '@/@core/stores/toast.store'
 import { $api } from '@/utils/api'
 import { Order } from '@/interface/order.interface'
 import { Product } from '@/interface/products.interface'
-import { decodeWeightBarcode } from '@/utils/weightBarcode'
+import { decodeReceiptBarcode, decodeWeightBarcode } from '@/utils/weightBarcode'
+import { ReceiptData, receiptFromCart, receiptFromOrder } from '@/utils/receipt'
+import { usePrinter } from '@/composables/usePrinter'
+import PrinterSettingsDialog from '@/components/PrinterSettingsDialog.vue'
+import ReceiptPreview from '@/components/ReceiptPreview.vue'
+import { useRouter } from 'vue-router'
 import { useDebounceFn, useOnline } from '@vueuse/core'
 
 definePage({
@@ -609,6 +646,7 @@ interface Basket {
   note: string
 }
 
+const router = useRouter()
 const productsStore = useProductsStore()
 const ordersStore = useOrdersStore()
 const customersStore = useCustomersStore()
@@ -761,13 +799,65 @@ function onNameEnter() {
 const barcodeInputRef = ref()
 const barcodeQuery = ref('')
 
+function anyDialogOpen() {
+  return paymentSectionOpen.value || receiptDialog.value || pendingDialog.value || printerDialog.value
+}
+
 function focusBarcode() {
+  // Modal oyna ochiq bo'lsa — fokusni undan tortib olmaymiz
+  if (anyDialogOpen()) return
   nextTick(() => barcodeInputRef.value?.focus?.())
 }
 // Boshqa maydondan (nomi bo'yicha qidiruv, klaviatura amali) chiqilgach,
 // skaner har doim tayyor turishi uchun fokus barcode'ga qaytariladi.
 function focusBarcodeSoon() {
   setTimeout(() => focusBarcode(), 150)
+}
+
+// Barcode input — "buyruq qatori": shtrix-kod/qisqa kod yoki raqam + amal.
+//   10 +   → tanlangan qatorga 10 ta qo'shish      (bo'sh + / − → ±1)
+//   1800 × → narxni 1800 qilish                    5000 ÷ → summadan miqdor
+//   1000 F6 → umumiy chegirma     500 F7 → tanlangan mahsulotga chegirma
+let lastBarcodeKeyAt = 0
+function onBarcodeKeydown(e: KeyboardEvent) {
+  const now = Date.now()
+  const fast = now - lastBarcodeKeyAt < 40 // skaner belgilarni juda tez yuboradi
+  lastBarcodeKeyAt = now
+
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    onBarcodeEnter()
+    return
+  }
+  if (!['+', '-', '*', '/'].includes(e.key) || fast) return
+
+  const raw = (barcodeQuery.value ?? '').trim().replace(',', '.')
+  const numeric = /^\d+(\.\d+)?$/.test(raw)
+  if (raw !== '' && !numeric) return // boshqa matn — odatdagidek yoziladi
+
+  e.preventDefault()
+  const line = activeLine.value
+  if (!line) {
+    toastStore.error('Avval savatdan mahsulotni tanlang')
+    return
+  }
+  if (raw === '') {
+    if (e.key === '+') stepQty(line, 1)
+    else if (e.key === '-') stepQty(line, -1)
+    return
+  }
+  barcodeQuery.value = ''
+  pending.value = raw
+  applyOp(e.key as '+' | '-' | '*' | '/')
+}
+
+// Barcode inputdagi raqamni (F6/F7/amal uchun) "pending" qiymatga ko'chirish
+function consumeBarcodeAsPending() {
+  const raw = (barcodeQuery.value ?? '').trim().replace(',', '.')
+  if (/^\d+(\.\d+)?$/.test(raw)) {
+    pending.value = raw
+    barcodeQuery.value = ''
+  }
 }
 
 async function onBarcodeEnter() {
@@ -798,6 +888,14 @@ async function onBarcodeEnter() {
     }
     barcodeQuery.value = ''
     focusBarcode()
+    return
+  }
+
+  // 🧾 Chek shtrix-kodi skanerlansa — shu chek "Cheklar" sahifasida ochiladi
+  const receiptId = decodeReceiptBarcode(value)
+  if (receiptId) {
+    barcodeQuery.value = ''
+    router.push({ path: '/receipts', query: { order: String(receiptId) } })
     return
   }
 
@@ -997,6 +1095,7 @@ function pendingNumber(): number {
 }
 
 function applyOp(op: '+' | '-' | '*' | '/') {
+  if (!pending.value) consumeBarcodeAsPending()
   const n = pendingNumber()
 
   // Naqd/Karta maydonlari uchun: +/- qiymatni to'g'ridan-to'g'ri o'sha
@@ -1037,6 +1136,7 @@ function applyOp(op: '+' | '-' | '*' | '/') {
 }
 
 function applyF6() {
+  if (!pending.value) consumeBarcodeAsPending()
   // Umumiy chekdan chegirma — to'g'ridan-to'g'ri so'm miqdorida
   overallDiscountValue.value = pendingNumber()
   pending.value = ''
@@ -1044,6 +1144,7 @@ function applyF6() {
 }
 
 function applyF7() {
+  if (!pending.value) consumeBarcodeAsPending()
   // Tanlangan mahsulotga chegirma — to'g'ridan-to'g'ri so'm miqdorida
   const line = activeLine.value
   if (!line) return
@@ -1066,6 +1167,18 @@ const mixedTouched = ref(false)
 watch(grandTotal, val => {
   if (!mixedTouched.value) mixedCash.value = val
 })
+
+function fillAllCash() {
+  mixedCash.value = grandTotal.value
+  mixedCard.value = 0
+  mixedTouched.value = true
+}
+
+function fillAllCard() {
+  mixedCard.value = grandTotal.value
+  mixedCash.value = 0
+  mixedTouched.value = true
+}
 
 function autoFillCard() {
   mixedCard.value = round2(Math.max(grandTotal.value - mixedCash.value, 0))
@@ -1147,10 +1260,40 @@ function formatDate(value: string) {
 const checkingOut = ref(false)
 const receiptDialog = ref(false)
 const pendingDialog = ref(false)
-const autoPrint = ref(false)
-const lastOrder = ref<(Order & { offline?: boolean }) | null>(null)
-const receiptLines = ref<CartLine[]>([])
-const receiptDate = ref('')
+const printerDialog = ref(false)
+const printing = ref(false)
+const receipt = ref<ReceiptData | null>(null)
+
+const {
+  connected: printerConnected,
+  autoPrint,
+  printReceipt: sendToPrinter,
+  tryReconnect: reconnectPrinter,
+} = usePrinter()
+
+// Haqiqiy termoprinterga chop etish (brauzer chop etish oynasisiz)
+async function runPrint(openSettingsIfMissing: boolean) {
+  if (!receipt.value) return
+  if (!printerConnected.value) {
+    toastStore.error(
+      openSettingsIfMissing ? 'Printer ulanmagan — sozlamalarni oching' : 'Chek chop etilmadi: printer ulanmagan',
+    )
+    if (openSettingsIfMissing) printerDialog.value = true
+    return
+  }
+  printing.value = true
+  try {
+    await sendToPrinter(receipt.value)
+  } catch (e: any) {
+    toastStore.error(e?.message || "Chop etib bo'lmadi")
+  } finally {
+    printing.value = false
+  }
+}
+
+function printCurrentReceipt() {
+  return runPrint(true)
+}
 
 async function checkout() {
   if (!cart.value.length) return
@@ -1191,43 +1334,46 @@ async function checkout() {
 
     if (customerId.value) payload.customerId = customerId.value
 
-    receiptLines.value = JSON.parse(JSON.stringify(cart.value))
-    receiptDate.value = new Date().toLocaleString('uz-UZ')
+    // Savat tozalanishidan OLDIN chek uchun kerakli ma'lumotlarni olib qo'yamiz
+    const customerName = customersStore.customers.find(c => c.id === customerId.value)?.fullName ?? null
 
     if (!isOnline.value) {
       await offlineStore.queueOrder(payload)
-      lastOrder.value = {
-        id: 0,
-        total: grandTotal.value,
-        paidAmount: effectivePaid.value,
+      receipt.value = receiptFromCart({
+        lines: cart.value.map(l => ({
+          name: l.name,
+          price: l.price,
+          quantity: l.quantity,
+          discount: lineDiscountAmount(l),
+        })),
+        overallDiscount: overallDiscountAmount.value,
+        paidAmount: Math.min(effectivePaid.value, grandTotal.value),
         debtAmount: debtAmount.value,
-        offline: true,
-      } as any
+        paymentType: derivedPaymentType.value,
+        cashier: cashierName.value,
+        customerName,
+      })
       receiptDialog.value = true
       toastStore.success('Chek oflayn saqlandi')
-      if (autoPrint.value) printReceipt()
       emptyActiveBasket()
+      if (autoPrint.value) await runPrint(false)
       return
     }
 
     const order = await ordersStore.createOrder(payload)
 
-    lastOrder.value = order
+    receipt.value = receiptFromOrder(order, { cashier: cashierName.value, customerName })
     receiptDialog.value = true
     toastStore.success('Chek muvaffaqiyatli yakunlandi')
-    if (autoPrint.value) printReceipt()
 
     emptyActiveBasket()
     loadRecent()
+    if (autoPrint.value) await runPrint(false)
   } catch (error: any) {
     toastStore.error(error?.data?.message || error?.response?._data?.message || 'Xatolik yuz berdi')
   } finally {
     checkingOut.value = false
   }
-}
-
-function printReceipt() {
-  nextTick(() => window.print())
 }
 
 function formatMoney(value: number) {
@@ -1236,6 +1382,9 @@ function formatMoney(value: number) {
 
 // ─────────────────────────── Hotkeys ───────────────────────────
 function onKeydown(e: KeyboardEvent) {
+  // Modal oyna ochiq paytda kassa tugmalari (F4/F6/F7, Esc) ishlamaydi
+  if (anyDialogOpen()) return
+
   // Barcode, qidiruv va boshqa haqiqiy matn maydonlari fokusda bo'lsa —
   // ularning odatiy yozuv xatti-harakatiga aralashmaymiz (masalan barcode
   // qo'lda kiritilayotgan bo'lsa raqamlar o'sha yerga tushishi kerak).
@@ -1292,11 +1441,41 @@ function onKeydown(e: KeyboardEvent) {
     e.preventDefault()
     applyF7()
   } else if (e.key === 'Escape') {
-    if (receiptDialog.value || pendingDialog.value) return
+    // Modal Esc bilan endigina yopilgan bo'lsa — savatni tozalamaymiz
+    if (Date.now() - lastDialogClosedAt < 300) return
     e.preventDefault()
     if (cart.value.length) emptyActiveBasket()
   }
 }
+
+// ─────────────────────────── Modal oynalar ───────────────────────────
+let lastDialogClosedAt = 0
+watch(
+  [paymentSectionOpen, receiptDialog, pendingDialog, printerDialog],
+  (now, before) => {
+    if (before.some((was, i) => was && !now[i])) {
+      lastDialogClosedAt = Date.now()
+      nextTick(() => focusBarcodeSoon())
+    }
+  },
+  { flush: 'sync' },
+)
+
+const cashInputRef = ref()
+watch(paymentSectionOpen, open => {
+  if (!open) return
+  paymentTab.value = 'pay'
+  if (!mixedTouched.value) {
+    mixedCash.value = grandTotal.value
+    mixedCard.value = 0
+  }
+  // To'lov maydoniga fokus va matnni belgilash — darhol yozish uchun
+  setTimeout(() => {
+    const input = cashInputRef.value?.$el?.querySelector('input')
+    input?.focus()
+    input?.select()
+  }, 150)
+})
 
 // ─────────────────────────── Onlayn holat kuzatuvi ───────────────────────────
 watch(isOnline, async online => {
@@ -1311,6 +1490,7 @@ watch(isOnline, async online => {
 })
 
 onMounted(async () => {
+  reconnectPrinter()
   await offlineStore.loadPending()
   await refreshOfflineCache()
   loadRecent()
@@ -1332,6 +1512,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     border-width: 1px;
     border-color: rgb(var(--v-theme-primary));
   }
+}
+
+.pos-barcode-hint {
+  max-inline-size: 520px;
+  line-height: 1.3;
 }
 
 .pos-cart-scroll {
@@ -1423,79 +1608,5 @@ kbd {
   border-radius: 4px;
   background: rgba(var(--v-theme-on-surface), 0.08);
   font-family: inherit;
-}
-
-.pos-receipt {
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
-
-  &__header {
-    text-align: center;
-    margin-block-end: 8px;
-  }
-
-  &__shop {
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  &__meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    opacity: 0.7;
-  }
-
-  &__divider {
-    text-align: center;
-    opacity: 0.5;
-    margin-block: 4px;
-  }
-
-  &__line {
-    margin-block-end: 4px;
-  }
-
-  &__line-sub {
-    display: flex;
-    justify-content: space-between;
-    opacity: 0.8;
-  }
-
-  &__row {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 600;
-  }
-
-  &__row--debt {
-    color: rgb(var(--v-theme-error));
-  }
-
-  &__footer {
-    text-align: center;
-    margin-block-start: 8px;
-    opacity: 0.7;
-  }
-}
-</style>
-
-<style>
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #pos-receipt, #pos-receipt * {
-    visibility: visible;
-  }
-  #pos-receipt {
-    position: fixed;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-    inline-size: 100%;
-  }
-  .pos-no-print {
-    display: none !important;
-  }
 }
 </style>

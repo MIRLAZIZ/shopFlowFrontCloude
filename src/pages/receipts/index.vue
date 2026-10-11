@@ -1,6 +1,27 @@
 <template>
   <div>
     <VCard title="Cheklar" class="mb-6">
+      <template #append>
+        <VBtn variant="tonal" prepend-icon="tabler-printer" @click="printerDialog = true">
+          Printer
+        </VBtn>
+      </template>
+
+      <VCardText class="pb-0">
+        <VTextField
+          ref="scanRef"
+          v-model="scanCode"
+          prepend-inner-icon="tabler-barcode"
+          placeholder="Chek shtrix-kodini skanerlang yoki chek raqamini yozing..."
+          variant="outlined"
+          density="comfortable"
+          clearable
+          hide-details
+          class="receipt-scan"
+          @keydown.enter.prevent="onScan"
+        />
+      </VCardText>
+
       <VCardText>
         <VRow>
           <VCol cols="12" sm="6" md="3">
@@ -115,42 +136,13 @@
     </VCard>
 
     <!-- Chek tafsiloti -->
-    <VDialog v-model="detailDialog" max-width="420">
+    <VDialog v-model="detailDialog" max-width="420" scrollable>
       <VCard v-if="detailOrder">
         <VCardText>
-          <div id="pos-receipt" class="pos-receipt">
-            <div class="pos-receipt__header">
-              <div class="pos-receipt__shop">CHEK</div>
-              <div class="pos-receipt__meta">
-                <span>#{{ detailOrder.id }}</span>
-                <span>{{ formatDate(detailOrder.createdAt) }}</span>
-              </div>
-            </div>
-            <div class="pos-receipt__divider">— — — — — — — — — — — — — — —</div>
-            <div v-for="item in detailOrder.items" :key="item.id" class="pos-receipt__line">
-              <div>{{ item.product.name }}</div>
-              <div class="pos-receipt__line-sub">
-                <span>{{ formatQty(item.quantity) }} × {{ formatMoney(item.selling_price) }}</span>
-                <span>{{ formatMoney(item.total) }}</span>
-              </div>
-            </div>
-            <div class="pos-receipt__divider">— — — — — — — — — — — — — — —</div>
-            <div class="pos-receipt__row"><span>Jami</span><span>{{ formatMoney(detailOrder.total) }} so'm</span></div>
-            <div class="pos-receipt__row"><span>To'landi</span><span>{{ formatMoney(detailOrder.paidAmount) }} so'm</span></div>
-            <div v-if="detailOrder.debtAmount > 0" class="pos-receipt__row pos-receipt__row--debt">
-              <span>Qarz</span><span>{{ formatMoney(detailOrder.debtAmount) }} so'm</span>
-            </div>
-            <div class="pos-receipt__row"><span>To'lov turi</span><span>{{ paymentLabel(detailOrder.paymentType) }}</span></div>
-            <div v-if="detailOrder.user" class="pos-receipt__row"><span>Kassir</span><span>{{ detailOrder.user.name }}</span></div>
-            <div class="pos-receipt__divider">— — — — — — — — — — — — — — —</div>
-            <div v-if="detailOrder.status === 'cancelled'" class="text-center text-error font-weight-bold my-1">
-              BEKOR QILINGAN
-            </div>
-            <div class="pos-receipt__footer">Xaridingiz uchun rahmat!</div>
-          </div>
+          <ReceiptPreview :receipt="detailReceipt" />
 
           <!-- Avval qilingan qaytarishlar -->
-          <div v-if="orderReturns.length" class="pos-no-print mt-4">
+          <div v-if="orderReturns.length" class="mt-4">
             <VDivider class="mb-2" />
             <div class="text-caption text-medium-emphasis mb-1">Qaytarishlar tarixi</div>
             <div v-for="r in orderReturns" :key="r.id" class="text-caption mb-2">
@@ -164,7 +156,7 @@
             </div>
           </div>
         </VCardText>
-        <VCardText class="d-flex justify-end gap-2 pt-0 pos-no-print">
+        <VCardText class="d-flex justify-end gap-2 flex-wrap">
           <VBtn
             v-if="detailOrder.status === 'completed' && hasReturnableItems"
             variant="tonal"
@@ -174,7 +166,7 @@
           >
             Qaytarish
           </VBtn>
-          <VBtn variant="tonal" prepend-icon="tabler-printer" @click="printReceipt">
+          <VBtn variant="tonal" prepend-icon="tabler-printer" :loading="printing" @click="printDetail">
             Chop etish
           </VBtn>
           <VBtn color="primary" @click="detailDialog = false">Yopish</VBtn>
@@ -236,6 +228,8 @@
       </VCard>
     </VDialog>
 
+    <PrinterSettingsDialog v-model="printerDialog" />
+
     <!-- Bekor qilish -->
     <VDialog v-model="cancelDialog" max-width="420">
       <VCard title="Chekni bekor qilish">
@@ -259,6 +253,13 @@ import { useOrdersStore } from '@/@core/stores/orders'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { Order, OrderItem, OrderReturn } from '@/interface/order.interface'
 import { useDebounceFn } from '@vueuse/core'
+import { useRoute } from 'vue-router'
+import PrinterSettingsDialog from '@/components/PrinterSettingsDialog.vue'
+import ReceiptPreview from '@/components/ReceiptPreview.vue'
+import { usePrinter } from '@/composables/usePrinter'
+import { useCustomersStore } from '@/@core/stores/customers'
+import { receiptFromOrder } from '@/utils/receipt'
+import { decodeReceiptBarcode } from '@/utils/weightBarcode'
 
 definePage({
   meta: {
@@ -269,6 +270,8 @@ definePage({
 
 const ordersStore = useOrdersStore()
 const toastStore = useToastStore()
+const customersStore = useCustomersStore()
+const route = useRoute()
 
 const page = ref(1)
 const filters = reactive({
@@ -320,20 +323,74 @@ const debouncedSearch = useDebounceFn(() => refresh(1), 400)
 const detailDialog = ref(false)
 const detailOrder = ref<Order | null>(null)
 const orderReturns = ref<OrderReturn[]>([])
+const detailCustomerName = ref<string | null>(null)
+
+const detailReceipt = computed(() =>
+  detailOrder.value
+    ? receiptFromOrder(detailOrder.value, { customerName: detailCustomerName.value })
+    : null,
+)
 
 async function openDetail(id: number) {
   try {
     detailOrder.value = await ordersStore.fetchOrder(id)
     orderReturns.value = await ordersStore.fetchOrderReturns(id)
+    detailCustomerName.value = null
+    if (detailOrder.value.customerId) {
+      try {
+        detailCustomerName.value = (await customersStore.fetchOne(detailOrder.value.customerId)).fullName
+      } catch {
+        // mijoz topilmasa ham chek ko'rsatiladi
+      }
+    }
     detailDialog.value = true
   } catch (error: any) {
     toastStore.error(error?.data?.message || error?.response?._data?.message || 'Xatolik')
   }
 }
 
-function printReceipt() {
-  nextTick(() => window.print())
+// ─────────────────────────── Haqiqiy printerga chop etish ───────────────────────────
+const printerDialog = ref(false)
+const printing = ref(false)
+const { connected: printerConnected, printReceipt: sendToPrinter } = usePrinter()
+
+async function printDetail() {
+  if (!detailReceipt.value) return
+  if (!printerConnected.value) {
+    toastStore.error('Printer ulanmagan — sozlamalarni oching')
+    printerDialog.value = true
+    return
+  }
+  printing.value = true
+  try {
+    await sendToPrinter(detailReceipt.value)
+  } catch (e: any) {
+    toastStore.error(e?.message || "Chop etib bo'lmadi")
+  } finally {
+    printing.value = false
+  }
 }
+
+// ─────────────────────────── Chek shtrix-kodi bo'yicha topish ───────────────────────────
+const scanRef = ref()
+const scanCode = ref('')
+
+async function onScan() {
+  const raw = (scanCode.value ?? '').trim()
+  if (!raw) return
+  let id = decodeReceiptBarcode(raw)
+  if (!id && /^\d{1,9}$/.test(raw)) id = Number(raw) // oddiy chek raqami
+  scanCode.value = ''
+  if (!id) {
+    toastStore.error('Bu chek shtrix-kodi emas')
+    return
+  }
+  await openDetail(id)
+}
+
+watch(detailDialog, open => {
+  if (!open) setTimeout(() => scanRef.value?.focus?.(), 150)
+})
 
 // ─────────────────────────── Qisman qaytarish ───────────────────────────
 const returnDialog = ref(false)
@@ -454,81 +511,23 @@ function formatDate(value: string) {
   })
 }
 
-onMounted(() => refresh(1))
+onMounted(() => {
+  refresh(1)
+  const fromQuery = Number(route.query.order)
+  if (fromQuery) openDetail(fromQuery)
+  else setTimeout(() => scanRef.value?.focus?.(), 200)
+})
+
+watch(
+  () => route.query.order,
+  val => {
+    if (val) openDetail(Number(val))
+  },
+)
 </script>
 
 <style lang="scss" scoped>
-.pos-receipt {
-  font-family: 'Courier New', monospace;
-  font-size: 0.8rem;
-
-  &__header {
-    text-align: center;
-    margin-block-end: 8px;
-  }
-
-  &__shop {
-    font-weight: 700;
-    font-size: 0.95rem;
-  }
-
-  &__meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    opacity: 0.7;
-  }
-
-  &__divider {
-    text-align: center;
-    opacity: 0.5;
-    margin-block: 4px;
-  }
-
-  &__line {
-    margin-block-end: 4px;
-  }
-
-  &__line-sub {
-    display: flex;
-    justify-content: space-between;
-    opacity: 0.8;
-  }
-
-  &__row {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 600;
-  }
-
-  &__row--debt {
-    color: rgb(var(--v-theme-error));
-  }
-
-  &__footer {
-    text-align: center;
-    margin-block-start: 8px;
-    opacity: 0.7;
-  }
-}
-</style>
-
-<style>
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  #pos-receipt, #pos-receipt * {
-    visibility: visible;
-  }
-  #pos-receipt {
-    position: fixed;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-    inline-size: 100%;
-  }
-  .pos-no-print {
-    display: none !important;
-  }
+.receipt-scan {
+  max-inline-size: 460px;
 }
 </style>
