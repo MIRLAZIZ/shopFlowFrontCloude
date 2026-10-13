@@ -8,26 +8,15 @@
           {{ isOnline ? 'Onlayn' : 'Oflayn' }}
         </VChip>
 
-        <VChip
-          v-if="offlineStore.pendingOrders.length"
-          :color="offlineStore.failedCount ? 'error' : 'warning'"
-          size="small"
-          variant="tonal"
-          class="cursor-pointer"
-          @click="pendingDialog = true"
-        >
+        <VChip v-if="offlineStore.pendingOrders.length" :color="offlineStore.failedCount ? 'error' : 'warning'"
+          size="small" variant="tonal" class="cursor-pointer" @click="pendingDialog = true">
           <VIcon start icon="tabler-clock-exclamation" size="14" />
           {{ offlineStore.pendingCount }} kutilmoqda
           <span v-if="offlineStore.failedCount">, {{ offlineStore.failedCount }} xato</span>
         </VChip>
 
-        <VChip
-          :color="printerConnected ? 'success' : undefined"
-          size="small"
-          :variant="printerConnected ? 'flat' : 'tonal'"
-          class="cursor-pointer"
-          @click="printerDialog = true"
-        >
+        <VChip :color="printerConnected ? 'success' : undefined" size="small"
+          :variant="printerConnected ? 'flat' : 'tonal'" class="cursor-pointer" @click="printerDialog = true">
           <VIcon start :icon="printerConnected ? 'tabler-printer' : 'tabler-printer-off'" size="14" />
           {{ printerConnected ? 'Printer ulangan' : 'Printer ulanmagan' }}
         </VChip>
@@ -40,38 +29,19 @@
 
     <!-- ═══════════════ BARCODE (kichik, chapda) + SAVAT TABLARI ═══════════════ -->
     <div class="d-flex align-center gap-3 mb-3 flex-wrap">
-      <VTextField
-        ref="barcodeInputRef"
-        v-model="barcodeQuery"
-        placeholder="Shtrix kod..."
-        prepend-inner-icon="tabler-barcode"
-        density="compact"
-        variant="outlined"
-        class="pos-barcode-input"
-        @keydown="onBarcodeKeydown"
-      />
+      <VTextField ref="barcodeInputRef" v-model="barcodeQuery" placeholder="Shtrix kod..."
+        prepend-inner-icon="tabler-barcode" density="compact" variant="outlined" class="pos-barcode-input"
+        @keydown="onBarcodeKeydown" />
       <span class="text-caption text-medium-emphasis pos-barcode-hint">
         Raqam yozib: <kbd>+</kbd> qo'shish · <kbd>−</kbd> ayirish · <kbd>×</kbd> narx · <kbd>÷</kbd> summa→miqdor ·
         <kbd>F6</kbd> umumiy / <kbd>F7</kbd> mahsulot chegirma
       </span>
 
-      <VChip
-        v-for="b in baskets"
-        :key="b.id"
-        :color="b.id === activeBasketId ? 'primary' : undefined"
-        :variant="b.id === activeBasketId ? 'flat' : 'tonal'"
-        class="cursor-pointer"
-        @click="activeBasketId = b.id"
-      >
+      <VChip v-for="b in baskets" :key="b.id" :color="b.id === activeBasketId ? 'primary' : undefined"
+        :variant="b.id === activeBasketId ? 'flat' : 'tonal'" class="cursor-pointer" @click="activeBasketId = b.id">
         {{ b.label }}
         <VChip v-if="b.cart.length" size="x-small" class="ml-1">{{ b.cart.length }}</VChip>
-        <VIcon
-          v-if="baskets.length > 1"
-          icon="tabler-x"
-          size="14"
-          class="ml-1"
-          @click.stop="closeBasket(b.id)"
-        />
+        <VIcon v-if="baskets.length > 1" icon="tabler-x" size="14" class="ml-1" @click.stop="closeBasket(b.id)" />
       </VChip>
       <VBtn icon size="small" variant="tonal" @click="addBasket">
         <VIcon icon="tabler-plus" />
@@ -83,13 +53,7 @@
       <VCol cols="12" md="8">
         <VCard :title="activeBasket.label" class="h-100">
           <template #append>
-            <VBtn
-              v-if="cart.length"
-              size="small"
-              variant="text"
-              color="error"
-              @click="emptyActiveBasket()"
-            >
+            <VBtn v-if="cart.length" size="small" variant="text" color="error" @click="emptyActiveBasket()">
               Tozalash
             </VBtn>
           </template>
@@ -102,12 +66,9 @@
               </p>
 
               <div v-else class="pos-cart-lines">
-                <div
-                  v-for="line in cart"
-                  :key="line.productId"
-                  class="pos-cart-line"
+                <div v-for="line in cart" :key="line.productId" class="pos-cart-line"
                   :class="{ 'pos-cart-line--active': activeLine?.productId === line.productId }"
-                >
+                  @click="targetLineQuantity(line)">
                   <div class="pos-cart-line__info">
                     <div class="text-body-2 font-weight-medium">{{ line.name }}</div>
                     <div class="text-caption text-medium-emphasis">
@@ -117,54 +78,34 @@
 
                   <!-- Miqdor: faqat tugmalar -->
                   <div class="pos-cart-line__qty">
-                    <VBtn icon size="x-small" variant="tonal" @click="stepQty(line, -1)">
+                    <!-- <VBtn icon size="x-small" variant="tonal" @click="stepQty(line, -1)">
                       <VIcon icon="tabler-minus" size="14" />
-                    </VBtn>
-                    <VBtn
-                      size="small"
-                      variant="tonal"
-                      :color="isTarget(line, 'qty') ? 'primary' : undefined"
-                      class="pos-cart-line__qty-value"
-                      @click="targetLineQuantity(line)"
-                    >
+                    </VBtn> -->
+                    <VBtn size="small" variant="tonal" :color="isTarget(line, 'qty') ? 'primary' : undefined"
+                      class="pos-cart-line__qty-value">
                       {{ formatQty(line.quantity) }}
                       <span class="pos-cart-line__unit">{{ line.unit }}</span>
                     </VBtn>
-                    <VBtn icon size="x-small" variant="tonal" @click="stepQty(line, 1)">
+                    <!-- <VBtn icon size="x-small" variant="tonal" @click="stepQty(line, 1)">
                       <VIcon icon="tabler-plus" size="14" />
-                    </VBtn>
+                    </VBtn> -->
                   </div>
 
                   <!-- Summa: bosilsa raqamli panel shu yerga yoziladi -->
-                  <VBtn
-                    size="small"
-                    variant="tonal"
-                    :color="isTarget(line, 'amount') ? 'primary' : undefined"
-                    class="pos-cart-line__amount"
-                    @click="targetLineAmount(line)"
-                  >
+                  <VBtn size="small" variant="tonal" :color="isTarget(line, 'amount') ? 'primary' : undefined"
+                    class="pos-cart-line__amount" @click="targetLineAmount(line)">
                     {{ formatMoney(grossAmount(line)) }}
                   </VBtn>
 
                   <!-- Narx: bosilsa raqamli panelda * orqali narx tushirish mumkin -->
-                  <VBtn
-                    size="small"
-                    variant="tonal"
-                    :color="isTarget(line, 'price') ? 'primary' : undefined"
-                    class="pos-cart-line__price"
-                    @click="targetLinePrice(line)"
-                  >
+                  <VBtn size="small" variant="tonal" :color="isTarget(line, 'price') ? 'primary' : undefined"
+                    class="pos-cart-line__price" @click="targetLinePrice(line)">
                     {{ formatMoney(line.price) }}
                   </VBtn>
 
                   <!-- Chegirma: bosilsa F7 orqali raqamli panelda kiritiladi -->
-                  <VBtn
-                    size="small"
-                    variant="tonal"
-                    :color="isTarget(line, 'discount') ? 'primary' : undefined"
-                    class="pos-cart-line__discount"
-                    @click="targetLineDiscount(line)"
-                  >
+                  <VBtn size="small" variant="tonal" :color="isTarget(line, 'discount') ? 'primary' : undefined"
+                    class="pos-cart-line__discount" @click="targetLineDiscount(line)">
                     {{ formatMoney(line.discount) }}
                   </VBtn>
 
@@ -178,26 +119,14 @@
             <VDivider class="my-3" />
 
             <!-- Qidiruv — kichik, pastda -->
-            <VTextField
-              ref="nameSearchRef"
-              v-model="nameQuery"
-              placeholder="Mahsulot nomi yoki qisqa kod bilan qidirish..."
-              prepend-inner-icon="tabler-search"
-              density="compact"
-              clearable
-              class="mb-2"
-              @update:model-value="onNameQueryChange"
-              @keydown.enter="onNameEnter"
-              @blur="focusBarcodeSoon"
-            />
+            <VTextField ref="nameSearchRef" v-model="nameQuery"
+              placeholder="Mahsulot nomi yoki qisqa kod bilan qidirish..." prepend-inner-icon="tabler-search"
+              density="compact" clearable class="mb-2" @update:model-value="onNameQueryChange"
+              @keydown.enter="onNameEnter" @blur="focusBarcodeSoon" />
             <VTable v-if="nameQuery.trim() && nameResults.length" density="compact" class="pos-mini-table mb-2">
               <tbody>
-                <tr
-                  v-for="p in nameResults"
-                  :key="p.id"
-                  :class="{ 'pos-row--disabled': p.quantity <= 0 }"
-                  @click="pickFromDropdown(p)"
-                >
+                <tr v-for="p in nameResults" :key="p.id" :class="{ 'pos-row--disabled': p.quantity <= 0 }"
+                  @click="pickFromDropdown(p)">
                   <td class="text-caption">{{ p.barcode || p.quick_code || '-' }}</td>
                   <td class="text-caption">{{ p.name }}</td>
                   <td class="text-end text-caption">{{ formatMoney(p.selling_price) }}</td>
@@ -232,13 +161,7 @@
               <span>{{ formatMoney(grandTotal) }} so'm</span>
             </div>
 
-            <VBtn
-              block
-              size="large"
-              color="primary"
-              :disabled="!cart.length"
-              @click="paymentSectionOpen = true"
-            >
+            <VBtn block size="large" color="primary" :disabled="!cart.length" @click="paymentSectionOpen = true">
               To'lov (F4)
             </VBtn>
           </VCardText>
@@ -251,22 +174,13 @@
           <VCardText>
             <div class="d-flex justify-space-between align-center mb-2">
               <div class="d-flex gap-1">
-                <VBtn
-                  icon size="small"
-                  :variant="autoPrint ? 'flat' : 'tonal'"
-                  :color="autoPrint ? 'primary' : undefined"
-                  title="Avtomatik chek chiqarish (printer ulangan bo'lsa)"
-                  @click="autoPrint = !autoPrint"
-                >
+                <VBtn icon size="small" :variant="autoPrint ? 'flat' : 'tonal'"
+                  :color="autoPrint ? 'primary' : undefined" title="Avtomatik chek chiqarish (printer ulangan bo'lsa)"
+                  @click="autoPrint = !autoPrint">
                   <VIcon icon="tabler-printer" size="18" />
                 </VBtn>
-                <VBtn
-                  icon size="small"
-                  variant="tonal"
-                  color="error"
-                  title="Barcha chegirmalarni bekor qilish"
-                  @click="resetAllDiscounts"
-                >
+                <VBtn icon size="small" variant="tonal" color="error" title="Barcha chegirmalarni bekor qilish"
+                  @click="resetAllDiscounts">
                   <VIcon icon="tabler-discount-off" size="18" />
                 </VBtn>
               </div>
@@ -276,13 +190,8 @@
             <div class="pos-keypad-display mb-2">{{ pending || '0' }}</div>
 
             <div class="pos-keypad">
-              <VBtn
-                v-for="key in ['7','8','9','4','5','6','1','2','3','0','00','⌫']"
-                :key="key"
-                variant="tonal"
-                class="pos-keypad__btn"
-                @click="pressKey(key)"
-              >
+              <VBtn v-for="key in ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', '00', '⌫']" :key="key"
+                variant="tonal" class="pos-keypad__btn" @click="pressKey(key)">
                 {{ key }}
               </VBtn>
             </div>
@@ -311,14 +220,8 @@
 
             <div class="text-caption text-medium-emphasis mb-2">Tezkor miqdor (tanlangan qatorga)</div>
             <div class="d-flex gap-1 flex-wrap">
-              <VBtn
-                v-for="n in [1,5,10,20,50]"
-                :key="n"
-                size="small"
-                variant="tonal"
-                :disabled="!activeLine"
-                @click="quickAddQty(n)"
-              >
+              <VBtn v-for="n in [1, 5, 10, 20, 50]" :key="n" size="small" variant="tonal" :disabled="!activeLine"
+                @click="quickAddQty(n)">
                 +{{ n }}
               </VBtn>
             </div>
@@ -364,37 +267,15 @@
           </VTabs>
 
           <div v-if="paymentTab === 'pay'">
-            <VTextField
-              ref="cashInputRef"
-              v-model.number="mixedCash"
-              type="number"
-              label="Naqd"
-              suffix="so'm"
-              variant="outlined"
-              class="mb-3"
-              @update:model-value="mixedTouched = true"
-              @keydown.enter.prevent="checkout"
-            />
+            <VTextField ref="cashInputRef" v-model.number="mixedCash" type="number" label="Naqd" suffix="so'm"
+              variant="outlined" class="mb-3" @update:model-value="mixedTouched = true"
+              @keydown.enter.prevent="checkout" />
 
-            <VTextField
-              v-model.number="mixedCard"
-              type="number"
-              label="Karta"
-              suffix="so'm"
-              variant="outlined"
-              class="mb-3"
-              @update:model-value="mixedTouched = true"
-              @keydown.enter.prevent="checkout"
-            >
+            <VTextField v-model.number="mixedCard" type="number" label="Karta" suffix="so'm" variant="outlined"
+              class="mb-3" @update:model-value="mixedTouched = true" @keydown.enter.prevent="checkout">
               <template #prepend>
-                <VBtn
-                  icon
-                  size="small"
-                  variant="tonal"
-                  color="primary"
-                  title="Qolgan summani kartaga hisoblash"
-                  @click="autoFillCard"
-                >
+                <VBtn icon size="small" variant="tonal" color="primary" title="Qolgan summani kartaga hisoblash"
+                  @click="autoFillCard">
                   <VIcon icon="tabler-calculator" size="18" />
                 </VBtn>
               </template>
@@ -425,36 +306,20 @@
               (Naqd + Karta jamidan qolgani avtomatik qarz bo'ladi)
             </p>
 
-            <VAutocomplete
-              v-model="customerId"
-              v-model:search="customerSearch"
-              :items="customersStore.customers"
-              item-title="fullName"
-              item-value="id"
-              label="Mijoz"
-              variant="outlined"
-              :loading="customerLoading"
-              :disabled="!isOnline"
-              clearable
-              no-filter
-              class="mb-2"
-              @update:search="onCustomerSearch"
-            />
+            <VAutocomplete v-model="customerId" v-model:search="customerSearch" :items="customersStore.customers"
+              item-title="fullName" item-value="id" label="Mijoz" variant="outlined" :loading="customerLoading"
+              :disabled="!isOnline" clearable no-filter class="mb-2" @update:search="onCustomerSearch" />
 
-            <VBtn
-              v-if="!newCustomerInline"
-              variant="tonal"
-              prepend-icon="tabler-user-plus"
-              size="small"
-              :disabled="!isOnline"
-              @click="newCustomerInline = true"
-            >
+            <VBtn v-if="!newCustomerInline" variant="tonal" prepend-icon="tabler-user-plus" size="small"
+              :disabled="!isOnline" @click="newCustomerInline = true">
               Yangi mijoz
             </VBtn>
 
             <div v-else class="mt-2">
-              <VTextField v-model="newCustomer.fullName" label="Ism familiya" variant="outlined" density="compact" class="mb-2" />
-              <VTextField v-model="newCustomer.phone" label="Telefon" variant="outlined" density="compact" class="mb-2" />
+              <VTextField v-model="newCustomer.fullName" label="Ism familiya" variant="outlined" density="compact"
+                class="mb-2" />
+              <VTextField v-model="newCustomer.phone" label="Telefon" variant="outlined" density="compact"
+                class="mb-2" />
               <div class="d-flex gap-2">
                 <VBtn size="small" variant="tonal" @click="newCustomerInline = false">Bekor</VBtn>
                 <VBtn size="small" color="primary" :disabled="!newCustomer.fullName" @click="createCustomer">
@@ -470,25 +335,13 @@
 
           <VDivider class="my-4" />
 
-          <VSwitch
-            v-model="autoPrint"
-            color="primary"
-            density="compact"
-            hide-details
-            label="Chekni avtomatik chop etish"
-            class="mb-4"
-          />
+          <VSwitch v-model="autoPrint" color="primary" density="compact" hide-details
+            label="Chekni avtomatik chop etish" class="mb-4" />
 
           <div class="d-flex gap-2">
             <VBtn variant="tonal" @click="paymentSectionOpen = false">Yopish</VBtn>
-            <VBtn
-              size="large"
-              color="primary"
-              class="flex-grow-1"
-              :disabled="checkingOut"
-              :loading="checkingOut"
-              @click="checkout"
-            >
+            <VBtn size="large" color="primary" class="flex-grow-1" :disabled="checkingOut" :loading="checkingOut"
+              @click="checkout">
               Yakunlash
             </VBtn>
           </div>
@@ -534,11 +387,8 @@
           <p v-if="!offlineStore.pendingOrders.length" class="text-medium-emphasis">
             Kutilayotgan chek yo'q
           </p>
-          <div
-            v-for="o in offlineStore.pendingOrders"
-            :key="o.localId"
-            class="d-flex justify-space-between align-center py-2 border-b"
-          >
+          <div v-for="o in offlineStore.pendingOrders" :key="o.localId"
+            class="d-flex justify-space-between align-center py-2 border-b">
             <div>
               <div class="text-body-2">{{ formatMoney(o.payload?.paidAmount ?? 0) }} so'm</div>
               <div class="text-caption text-medium-emphasis">
@@ -550,14 +400,8 @@
               <div v-if="o.errorMessage" class="text-caption text-error">{{ o.errorMessage }}</div>
             </div>
             <div class="d-flex gap-1">
-              <VBtn
-                v-if="o.status === 'failed'"
-                size="x-small"
-                variant="tonal"
-                color="primary"
-                :disabled="!isOnline"
-                @click="offlineStore.retryOne(o.localId)"
-              >
+              <VBtn v-if="o.status === 'failed'" size="x-small" variant="tonal" color="primary" :disabled="!isOnline"
+                @click="offlineStore.retryOne(o.localId)">
                 Qayta urinish
               </VBtn>
               <VBtn size="x-small" variant="text" color="error" @click="offlineStore.discardOne(o.localId)">
@@ -567,12 +411,8 @@
           </div>
         </VCardText>
         <VCardText class="d-flex justify-end">
-          <VBtn
-            variant="tonal"
-            :disabled="!isOnline || offlineStore.syncing"
-            :loading="offlineStore.syncing"
-            @click="offlineStore.syncPending()"
-          >
+          <VBtn variant="tonal" :disabled="!isOnline || offlineStore.syncing" :loading="offlineStore.syncing"
+            @click="offlineStore.syncPending()">
             Hammasini sinxronlash
           </VBtn>
         </VCardText>
@@ -589,12 +429,7 @@
           <VBtn variant="text" prepend-icon="tabler-settings" @click="printerDialog = true">
             Printer
           </VBtn>
-          <VBtn
-            variant="tonal"
-            prepend-icon="tabler-printer"
-            :loading="printing"
-            @click="printCurrentReceipt"
-          >
+          <VBtn variant="tonal" prepend-icon="tabler-printer" :loading="printing" @click="printCurrentReceipt">
             Chek chiqarish
           </VBtn>
           <VBtn color="primary" @click="receiptDialog = false">Yopish</VBtn>
@@ -612,17 +447,17 @@ import { useOfflineStore } from '@/@core/stores/offline'
 import { useOrdersStore } from '@/@core/stores/orders'
 import { useProductsStore } from '@/@core/stores/products'
 import { useToastStore } from '@/@core/stores/toast.store'
-import { $api } from '@/utils/api'
-import { Order } from '@/interface/order.interface'
-import { Product } from '@/interface/products.interface'
-import { decodeQuantityBarcode, decodeReceiptBarcode } from '@/utils/weightBarcode'
-import { isCountUnit, unitLabelOf } from '@/utils/units'
-import { ReceiptData, receiptFromCart, receiptFromOrder } from '@/utils/receipt'
-import { usePrinter } from '@/composables/usePrinter'
 import PrinterSettingsDialog from '@/components/PrinterSettingsDialog.vue'
 import ReceiptPreview from '@/components/ReceiptPreview.vue'
-import { useRouter } from 'vue-router'
+import { usePrinter } from '@/composables/usePrinter'
+import { Order } from '@/interface/order.interface'
+import { Product } from '@/interface/products.interface'
+import { $api } from '@/utils/api'
+import { ReceiptData, receiptFromCart, receiptFromOrder } from '@/utils/receipt'
+import { isCountUnit, unitLabelOf } from '@/utils/units'
+import { decodeQuantityBarcode, decodeReceiptBarcode } from '@/utils/weightBarcode'
 import { useDebounceFn, useOnline } from '@vueuse/core'
+import { useRouter } from 'vue-router'
 
 definePage({
   meta: {
@@ -1612,7 +1447,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   display: flex;
   gap: 6px;
 
-  > * {
+  >* {
     flex: 1;
   }
 }
