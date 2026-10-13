@@ -1,4 +1,4 @@
-import { Customer } from '@/interface/customer.interface'
+import { Customer, CustomerDebtHistory } from '@/interface/customer.interface'
 import { ApiResponse } from '@/type/api-response.type'
 import { defineStore } from 'pinia'
 
@@ -42,6 +42,12 @@ export const useCustomersStore = defineStore('customers', {
       return await $api(`/customers/${id}`, {
         method: 'delete',
       })
+    },
+
+    // Qarz tarixi: qarzlar, to'lovlar va bog'langan cheklar (nima olgani)
+    async fetchDebtHistory(id: number) {
+      const response: { data: CustomerDebtHistory } = await $api(`/customers/${id}/debts`)
+      return response.data
     },
 
     async fetchOne(id: number) {

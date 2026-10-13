@@ -10,7 +10,7 @@ export interface Product {
     price_history: PriceHistory[]
     quantity: number
     isLowStock: boolean
-    unit: null | number | { id: number; name: string }
+    unit: null | number | { id: number; name: string; label: string }
     price_mode: string
     selling_price?: number
     purchase_price?: number

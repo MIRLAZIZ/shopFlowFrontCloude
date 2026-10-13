@@ -48,6 +48,7 @@ export const useDebtsStore = defineStore('debts', {
       amount: number
       note?: string
       dueDate?: string
+      orderId?: number
     }) {
       const response: { data: Debt } = await $api('/debts', {
         method: 'post',

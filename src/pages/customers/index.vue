@@ -42,8 +42,8 @@
               <IconBtn @click="openEdit(c)">
                 <VIcon icon="tabler-edit" color="success" />
               </IconBtn>
-              <IconBtn @click="router.push(`/debts?customerId=${c.id}`)">
-                <VIcon icon="tabler-report-money" color="warning" />
+              <IconBtn title="Qarz tarixi" @click="openHistory(c.id)">
+                <VIcon icon="tabler-history" color="warning" />
               </IconBtn>
               <IconBtn @click="remove(c.id)">
                 <VIcon icon="tabler-trash" color="error" />
@@ -80,6 +80,8 @@
       </VCard>
     </VDialog>
 
+    <CustomerHistoryDialog v-model="historyDialog" :customer-id="historyCustomerId" @changed="refresh(customersStore.page)" />
+
     <DelateDialog v-model:delete-modal="deleteModal" @delete-element="confirmDelete" />
   </div>
 </template>
@@ -89,6 +91,7 @@ import { useCustomersStore } from '@/@core/stores/customers'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { Customer } from '@/interface/customer.interface'
 import { useDebounceFn } from '@vueuse/core'
+import CustomerHistoryDialog from '@/components/CustomerHistoryDialog.vue'
 import { useRouter } from 'vue-router'
 
 definePage({
@@ -109,6 +112,15 @@ const deleteModal = ref(false)
 const pendingDeleteId = ref<number | null>(null)
 
 const form = reactive({ fullName: '', phone: '', note: '' })
+
+// Qarz tarixi (qarzlar, to'lovlar, nima olgani — chek bilan)
+const historyDialog = ref(false)
+const historyCustomerId = ref<number | null>(null)
+
+function openHistory(id: number) {
+  historyCustomerId.value = id
+  historyDialog.value = true
+}
 
 function refresh(page = 1) {
   customersStore.fetchCustomers(page, search.value || undefined).catch((error: any) => {

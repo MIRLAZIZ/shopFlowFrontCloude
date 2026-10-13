@@ -27,7 +27,7 @@ export function generateWeightBarcode(productId: number, weightGrams: number): s
   }
   const grams = Math.round(weightGrams)
   if (grams <= 0 || grams > 99999) {
-    throw new Error("Vazn 0 dan 99999 gramm (~100 kg) oralig'ida bo'lishi kerak")
+    throw new Error("Miqdor 0.001 dan 99.999 gacha bo'lishi kerak")
   }
 
   const productPart = String(productId).padStart(5, '0')
@@ -78,4 +78,18 @@ export function decodeReceiptBarcode(code: string): number | null {
   if (ean13CheckDigit(code.slice(0, 12)) !== Number(code[12])) return null
   const id = Number(code.slice(2, 12))
   return id > 0 ? id : null
+}
+
+// ─────────────────────────── Birlikka bog'liq (umumiy) funksiyalar ───────────────────────────
+// Kodda miqdor "mingdan bir" birlikda saqlanadi: kg → gramm, litr → millilitr,
+// dona → 1 dona = 1000. Ya'ni kod HAR QANDAY o'lchov birligi uchun ishlaydi,
+// mahsulotning o'z birligi (kg, litr, dona, metr...) qanday bo'lsa — shunda.
+// Maksimal miqdor: 99.999 birlik.
+export function generateQuantityBarcode(productId: number, quantity: number): string {
+  return generateWeightBarcode(productId, Math.round(quantity * 1000))
+}
+
+export function decodeQuantityBarcode(code: string): { productId: number; quantity: number } | null {
+  const d = decodeWeightBarcode(code)
+  return d ? { productId: d.productId, quantity: d.weightGrams / 1000 } : null
 }

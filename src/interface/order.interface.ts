@@ -9,6 +9,7 @@ export interface OrderItem {
     product: {
         id: number
         name: string
+        unit?: string | null
     }
 }
 
@@ -22,6 +23,7 @@ export interface OrderReturn {
     items: {
         productId: number
         productName: string
+        unit?: string | null
         quantity: number
         refundAmount: number
     }[]

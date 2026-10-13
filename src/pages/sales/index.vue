@@ -111,7 +111,7 @@
                   <div class="pos-cart-line__info">
                     <div class="text-body-2 font-weight-medium">{{ line.name }}</div>
                     <div class="text-caption text-medium-emphasis">
-                      {{ formatMoney(line.price) }} so'm / dona
+                      {{ formatMoney(line.price) }} so'm / {{ line.unit }}
                     </div>
                   </div>
 
@@ -128,6 +128,7 @@
                       @click="targetLineQuantity(line)"
                     >
                       {{ formatQty(line.quantity) }}
+                      <span class="pos-cart-line__unit">{{ line.unit }}</span>
                     </VBtn>
                     <VBtn icon size="x-small" variant="tonal" @click="stepQty(line, 1)">
                       <VIcon icon="tabler-plus" size="14" />
@@ -614,7 +615,8 @@ import { useToastStore } from '@/@core/stores/toast.store'
 import { $api } from '@/utils/api'
 import { Order } from '@/interface/order.interface'
 import { Product } from '@/interface/products.interface'
-import { decodeReceiptBarcode, decodeWeightBarcode } from '@/utils/weightBarcode'
+import { decodeQuantityBarcode, decodeReceiptBarcode } from '@/utils/weightBarcode'
+import { isCountUnit, unitLabelOf } from '@/utils/units'
 import { ReceiptData, receiptFromCart, receiptFromOrder } from '@/utils/receipt'
 import { usePrinter } from '@/composables/usePrinter'
 import PrinterSettingsDialog from '@/components/PrinterSettingsDialog.vue'
@@ -632,6 +634,7 @@ definePage({
 interface CartLine {
   productId: number
   name: string
+  unit: string // o'lchov birligi: kg, dona, litr...
   price: number
   quantity: number
   discount: number
@@ -866,7 +869,7 @@ async function onBarcodeEnter() {
 
   // 🏷️ Vaznli shtrix-kod (masalan 5 kg piyoz qadog'i) bo'lsa — mahsulot
   // ID va vazn to'g'ridan-to'g'ri kod ichidan o'qiladi, qidiruv shart emas
-  const decoded = decodeWeightBarcode(value)
+  const decoded = decodeQuantityBarcode(value)
   if (decoded) {
     try {
       let product: Product | null = null
@@ -880,8 +883,8 @@ async function onBarcodeEnter() {
       if (!product) {
         toastStore.error('Shtrix-koddagi mahsulot topilmadi')
       } else {
-        addToCart(product, decoded.weightKg)
-        toastStore.success(`${product.name} — ${decoded.weightKg} kg qo'shildi`)
+        addToCart(product, decoded.quantity)
+        toastStore.success(`${product.name} — ${decoded.quantity} ${unitLabelOf(product)} qo'shildi`)
       }
     } catch {
       toastStore.error('Shtrix-koddagi mahsulot topilmadi')
@@ -956,6 +959,7 @@ function addToCart(product: Product, exactQuantity?: number) {
     const line: CartLine = {
       productId: product.id,
       name: product.name,
+      unit: unitLabelOf(product),
       price: product.selling_price ?? 0,
       quantity: exactQuantity ?? 1,
       discount: 0,
@@ -972,7 +976,10 @@ function removeFromCart(productId: number) {
 }
 
 function clampQty(line: CartLine) {
-  if (!line.quantity || line.quantity <= 0) line.quantity = 0.001
+  // Dona kabi sanaladigan birliklarda miqdor butun son bo'lishi shart;
+  // kg, litr, metr kabilarda kasr (masalan 0.68 kg) mumkin.
+  if (isCountUnit(line.unit)) line.quantity = Math.max(Math.round(line.quantity || 0), 1)
+  else if (!line.quantity || line.quantity <= 0) line.quantity = 0.001
   if (line.quantity > line.availableQuantity) {
     line.quantity = line.availableQuantity
     toastStore.error("Omborda shuncha mahsulot yo'q")
@@ -1342,6 +1349,7 @@ async function checkout() {
       receipt.value = receiptFromCart({
         lines: cart.value.map(l => ({
           name: l.name,
+          unit: l.unit,
           price: l.price,
           quantity: l.quantity,
           discount: lineDiscountAmount(l),
@@ -1512,6 +1520,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     border-width: 1px;
     border-color: rgb(var(--v-theme-primary));
   }
+}
+
+.pos-cart-line__unit {
+  margin-inline-start: 3px;
+  font-size: 0.7rem;
+  opacity: 0.7;
 }
 
 .pos-barcode-hint {

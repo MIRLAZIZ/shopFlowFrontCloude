@@ -42,6 +42,7 @@ declare global {
   const customRef: typeof import('vue')['customRef']
   const debouncedRef: typeof import('@vueuse/core')['debouncedRef']
   const debouncedWatch: typeof import('@vueuse/core')['debouncedWatch']
+  const decodeQuantityBarcode: typeof import('./src/utils/weightBarcode')['decodeQuantityBarcode']
   const decodeReceiptBarcode: typeof import('./src/utils/weightBarcode')['decodeReceiptBarcode']
   const decodeWeightBarcode: typeof import('./src/utils/weightBarcode')['decodeWeightBarcode']
   const defaultPrinterSettings: typeof import('./src/utils/escpos')['defaultPrinterSettings']
@@ -58,6 +59,7 @@ declare global {
   const formatDate: typeof import('./src/@core/utils/formatters')['formatDate']
   const formatDateToMonthShort: typeof import('./src/@core/utils/formatters')['formatDateToMonthShort']
   const formatReceiptDate: typeof import('./src/utils/receipt')['formatReceiptDate']
+  const generateQuantityBarcode: typeof import('./src/utils/weightBarcode')['generateQuantityBarcode']
   const generateReceiptBarcode: typeof import('./src/utils/weightBarcode')['generateReceiptBarcode']
   const generateWeightBarcode: typeof import('./src/utils/weightBarcode')['generateWeightBarcode']
   const getActivePinia: typeof import('pinia')['getActivePinia']
@@ -68,6 +70,7 @@ declare global {
   const inject: typeof import('vue')['inject']
   const injectLocal: typeof import('@vueuse/core')['injectLocal']
   const integerValidator: typeof import('./src/composables/validator')['integerValidator']
+  const isCountUnit: typeof import('./src/utils/units')['isCountUnit']
   const isDarkPreferred: typeof import('./src/@core/composable/useThemeConfig')['isDarkPreferred']
   const isDefined: typeof import('@vueuse/core')['isDefined']
   const isEmpty: typeof import('./src/composables/helpers')['isEmpty']
@@ -164,6 +167,7 @@ declare global {
   const tryOnMounted: typeof import('@vueuse/core')['tryOnMounted']
   const tryOnScopeDispose: typeof import('@vueuse/core')['tryOnScopeDispose']
   const tryOnUnmounted: typeof import('@vueuse/core')['tryOnUnmounted']
+  const unitLabelOf: typeof import('./src/utils/units')['unitLabelOf']
   const unref: typeof import('vue')['unref']
   const unrefElement: typeof import('@vueuse/core')['unrefElement']
   const until: typeof import('@vueuse/core')['until']
@@ -423,6 +427,7 @@ declare module 'vue' {
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
+    readonly decodeQuantityBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['decodeQuantityBarcode']>
     readonly decodeReceiptBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['decodeReceiptBarcode']>
     readonly decodeWeightBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['decodeWeightBarcode']>
     readonly defaultPrinterSettings: UnwrapRef<typeof import('./src/utils/escpos')['defaultPrinterSettings']>
@@ -439,6 +444,7 @@ declare module 'vue' {
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters')['formatDate']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('./src/@core/utils/formatters')['formatDateToMonthShort']>
     readonly formatReceiptDate: UnwrapRef<typeof import('./src/utils/receipt')['formatReceiptDate']>
+    readonly generateQuantityBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['generateQuantityBarcode']>
     readonly generateReceiptBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['generateReceiptBarcode']>
     readonly generateWeightBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['generateWeightBarcode']>
     readonly getActivePinia: UnwrapRef<typeof import('pinia')['getActivePinia']>
@@ -449,6 +455,7 @@ declare module 'vue' {
     readonly inject: UnwrapRef<typeof import('vue')['inject']>
     readonly injectLocal: UnwrapRef<typeof import('@vueuse/core')['injectLocal']>
     readonly integerValidator: UnwrapRef<typeof import('./src/composables/validator')['integerValidator']>
+    readonly isCountUnit: UnwrapRef<typeof import('./src/utils/units')['isCountUnit']>
     readonly isDefined: UnwrapRef<typeof import('@vueuse/core')['isDefined']>
     readonly isEmpty: UnwrapRef<typeof import('./src/composables/helpers')['isEmpty']>
     readonly isEmptyArray: UnwrapRef<typeof import('./src/composables/helpers')['isEmptyArray']>
@@ -542,6 +549,7 @@ declare module 'vue' {
     readonly tryOnMounted: UnwrapRef<typeof import('@vueuse/core')['tryOnMounted']>
     readonly tryOnScopeDispose: UnwrapRef<typeof import('@vueuse/core')['tryOnScopeDispose']>
     readonly tryOnUnmounted: UnwrapRef<typeof import('@vueuse/core')['tryOnUnmounted']>
+    readonly unitLabelOf: UnwrapRef<typeof import('./src/utils/units')['unitLabelOf']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>

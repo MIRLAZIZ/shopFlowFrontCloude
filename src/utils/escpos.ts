@@ -224,7 +224,8 @@ export function buildReceiptBytes(receipt: ReceiptData, settings: PrinterSetting
   for (const item of receipt.items) {
     for (const l of wrap(item.name, W)) b.line(l)
     const gross = item.total + item.discount
-    b.line(leftRight(`${fmtQty(item.quantity)} x ${fmt(item.price)}`, fmt(gross), W))
+    const qtyText = `${fmtQty(item.quantity)}${item.unit ? ' ' + item.unit : ''} x ${fmt(item.price)}`
+    b.line(leftRight(qtyText, fmt(gross), W))
     if (item.discount > 0) b.line(leftRight('  chegirma', '-' + fmt(item.discount), W))
   }
   b.line(dash)

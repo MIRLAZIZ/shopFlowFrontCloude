@@ -5,6 +5,7 @@ import { Order } from '@/interface/order.interface'
 
 export interface ReceiptItem {
   name: string
+  unit?: string | null // o'lchov birligi (kg, dona, litr...)
   quantity: number
   price: number
   discount: number // shu qator bo'yicha jami chegirma (so'm)
@@ -48,7 +49,7 @@ export function receiptFromOrder(
 ): ReceiptData {
   const map = new Map<string, ReceiptItem>()
   for (const it of order.items ?? []) {
-    const key = `${it.product?.id}_${it.selling_price}`
+    const key = `${it.product?.id}_${it.selling_price}_${it.product?.unit ?? ''}`
     const existing = map.get(key)
     if (existing) {
       existing.quantity = round3(existing.quantity + it.quantity)
@@ -57,6 +58,7 @@ export function receiptFromOrder(
     } else {
       map.set(key, {
         name: it.product?.name ?? '-',
+        unit: it.product?.unit ?? null,
         quantity: it.quantity,
         price: it.selling_price,
         discount: it.discount,
@@ -83,7 +85,7 @@ export function receiptFromOrder(
 
 // Internet yo'q paytda (chek hali serverga yuborilmagan) savatdan.
 export function receiptFromCart(params: {
-  lines: { name: string; price: number; quantity: number; discount: number }[]
+  lines: { name: string; unit?: string | null; price: number; quantity: number; discount: number }[]
   overallDiscount: number
   paidAmount: number
   debtAmount: number
@@ -93,6 +95,7 @@ export function receiptFromCart(params: {
 }): ReceiptData {
   const items: ReceiptItem[] = params.lines.map(l => ({
     name: l.name,
+    unit: l.unit ?? null,
     quantity: l.quantity,
     price: l.price,
     discount: l.discount,

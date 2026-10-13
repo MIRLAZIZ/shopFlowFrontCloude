@@ -3,9 +3,10 @@
     <VCard title="Vaznli shtrix-kod yaratish" class="mb-6">
       <VCardText>
         <p class="text-body-2 text-medium-emphasis mb-4">
-          Shtrix-kodi yo'q yoki vazn bo'yicha sotiladigan mahsulotlar (piyoz, go'sht, un va h.k.)
-          uchun qadoq yorlig'i yarating. Masalan piyoz 5 kg qilib qadoqlansa — shu yorliqni
-          chop etib yopishtirasiz, kassada skanerlanganda tizim avtomatik 5 kg deb tushunadi.
+          Shtrix-kodi yo'q yoki o'lchov bo'yicha sotiladigan mahsulotlar (piyoz, go'sht, un, suyuqlik va h.k.)
+          uchun qadoq yorlig'i yarating. Miqdor mahsulotning o'z o'lchov birligida (kg, litr, dona...)
+          kiritiladi. Masalan piyoz 5 kg qilib qadoqlansa — shu yorliqni chop etib yopishtirasiz,
+          kassada skanerlanganda tizim avtomatik 5 kg deb tushunadi.
         </p>
 
         <VRow>
@@ -28,14 +29,20 @@
                 <VListItem
                   v-bind="props"
                   :title="item.raw.name"
-                  :subtitle="`${formatMoney(item.raw.selling_price)} so'm / ${unitLabel(item.raw)}`"
+                  :subtitle="`${formatMoney(item.raw.selling_price)} so'm / ${unitLabelOf(item.raw)}`"
                 />
               </template>
             </VAutocomplete>
           </VCol>
 
           <VCol cols="12" sm="3">
-            <AppTextField v-model.number="weightKg" type="number" label="Vazn (kg)" step="0.001" />
+            <AppTextField
+              v-model.number="quantity"
+              type="number"
+              :label="`Miqdor (${unitLabel})`"
+              :step="countUnit ? 1 : 0.001"
+              min="0"
+            />
           </VCol>
 
           <VCol cols="12" sm="3">
@@ -45,13 +52,13 @@
 
         <div class="d-flex gap-1 flex-wrap mb-4">
           <VBtn
-            v-for="w in quickWeights"
+            v-for="w in quickAmounts"
             :key="w"
             size="small"
             variant="tonal"
-            @click="weightKg = w"
+            @click="quantity = w"
           >
-            {{ w }} kg
+            {{ w }} {{ unitLabel }}
           </VBtn>
         </div>
 
@@ -59,18 +66,18 @@
           <div>
             <div class="font-weight-medium">{{ selectedProduct.name }}</div>
             <div class="text-caption text-medium-emphasis">
-              {{ formatMoney(selectedProduct.selling_price) }} so'm / {{ unitLabel(selectedProduct) }}
+              {{ formatMoney(selectedProduct.selling_price) }} so'm / {{ unitLabel }}
             </div>
           </div>
           <div class="text-h6">
-            {{ formatMoney((selectedProduct.selling_price || 0) * weightKg) }} so'm
+            {{ quantity }} {{ unitLabel }} = {{ formatMoney((selectedProduct.selling_price || 0) * quantity) }} so'm
           </div>
         </div>
 
         <VBtn
           color="primary"
           prepend-icon="tabler-barcode"
-          :disabled="!selectedProduct || !weightKg || weightKg <= 0"
+          :disabled="!selectedProduct || !quantity || quantity <= 0"
           @click="generateLabels"
         >
           Yorliq yaratish
@@ -91,7 +98,7 @@
           <div v-for="(label, idx) in labels" :key="idx" class="barcode-label">
             <div class="barcode-label__name">{{ label.productName }}</div>
             <div class="barcode-label__meta">
-              <span>{{ label.weightKg }} kg</span>
+              <span>{{ label.quantity }} {{ label.unit }}</span>
               <span class="font-weight-bold">{{ formatMoney(label.price) }} so'm</span>
             </div>
             <svg :ref="el => setBarcodeRef(el as SVGElement, idx)" class="barcode-label__svg" />
@@ -106,7 +113,8 @@
 import { useProductsStore } from '@/@core/stores/products'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { Product } from '@/interface/products.interface'
-import { generateWeightBarcode } from '@/utils/weightBarcode'
+import { generateQuantityBarcode } from '@/utils/weightBarcode'
+import { isCountUnit, unitLabelOf } from '@/utils/units'
 import { useDebounceFn } from '@vueuse/core'
 import JsBarcode from 'jsbarcode'
 
@@ -126,9 +134,13 @@ const searching = ref(false)
 const selectedProductId = ref<number | null>(null)
 const selectedProduct = ref<Product | null>(null)
 
-const weightKg = ref(1)
+const quantity = ref(1)
 const copies = ref(1)
-const quickWeights = [0.5, 1, 2, 5, 10]
+
+// Mahsulotning o'z birligi (kg, litr, dona...) — "dona" qattiq yozilmagan
+const unitLabel = computed(() => (selectedProduct.value ? unitLabelOf(selectedProduct.value) : ''))
+const countUnit = computed(() => isCountUnit(unitLabel.value))
+const quickAmounts = computed(() => (countUnit.value ? [1, 2, 5, 10, 20] : [0.5, 1, 2, 5, 10]))
 
 const onSearch = useDebounceFn(async (value: string) => {
   if (!value?.trim()) {
@@ -148,18 +160,14 @@ const onSearch = useDebounceFn(async (value: string) => {
 
 function onProductSelect(id: number | null) {
   selectedProduct.value = searchResults.value.find(p => p.id === id) ?? null
-}
-
-function unitLabel(product: Product) {
-  const unit = product.unit
-  if (unit && typeof unit === 'object') return unit.name
-  return 'dona'
+  quantity.value = 1
 }
 
 interface BarcodeLabel {
   code: string
   productName: string
-  weightKg: number
+  quantity: number
+  unit: string
   price: number
 }
 
@@ -173,13 +181,16 @@ function setBarcodeRef(el: SVGElement | null, idx: number) {
 function generateLabels() {
   if (!selectedProduct.value) return
   try {
-    const code = generateWeightBarcode(selectedProduct.value.id, weightKg.value * 1000)
-    const price = Math.round((selectedProduct.value.selling_price || 0) * weightKg.value)
+    let qty = Number(quantity.value)
+    if (countUnit.value) qty = Math.round(qty) // dona — faqat butun son
+    const code = generateQuantityBarcode(selectedProduct.value.id, qty)
+    const price = Math.round((selectedProduct.value.selling_price || 0) * qty)
 
     labels.value = Array.from({ length: Math.max(1, copies.value) }, () => ({
       code,
       productName: selectedProduct.value!.name,
-      weightKg: weightKg.value,
+      quantity: qty,
+      unit: unitLabel.value,
       price,
     }))
 

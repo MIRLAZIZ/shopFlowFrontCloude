@@ -24,7 +24,7 @@
       <div v-for="(item, i) in receipt.items" :key="i" class="receipt__item">
         <div class="receipt__item-name">{{ item.name }}</div>
         <div class="receipt__row">
-          <span class="receipt__muted">{{ fmtQty(item.quantity) }} × {{ fmt(item.price) }}</span>
+          <span class="receipt__muted">{{ fmtQty(item.quantity) }}{{ item.unit ? ' ' + item.unit : '' }} × {{ fmt(item.price) }}</span>
           <span>{{ fmt(item.total + item.discount) }}</span>
         </div>
         <div v-if="item.discount > 0" class="receipt__row receipt__discount">

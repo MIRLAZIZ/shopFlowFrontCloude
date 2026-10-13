@@ -151,7 +151,7 @@
                 <span class="font-weight-medium">{{ formatMoney(r.totalRefundAmount) }} so'm</span>
               </div>
               <div v-for="it in r.items" :key="it.productId" class="text-medium-emphasis">
-                {{ it.productName }} — {{ formatQty(it.quantity) }} dona ({{ formatMoney(it.refundAmount) }} so'm)
+                {{ it.productName }} — {{ formatQty(it.quantity) }}{{ it.unit ? ' ' + it.unit : '' }} ({{ formatMoney(it.refundAmount) }} so'm)
               </div>
             </div>
           </div>
@@ -190,7 +190,7 @@
             <tbody>
               <tr v-for="item in detailOrder.items" :key="item.id">
                 <td>{{ item.product.name }}</td>
-                <td class="text-end">{{ formatQty(item.quantity) }}</td>
+                <td class="text-end">{{ formatQty(item.quantity) }}{{ item.product.unit ? ' ' + item.product.unit : '' }}</td>
                 <td class="text-end">{{ formatQty(item.returnedQuantity || 0) }}</td>
                 <td>
                   <VTextField
