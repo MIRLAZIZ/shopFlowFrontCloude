@@ -1,5 +1,10 @@
 <template>
   <div>
+    <VAlert v-if="!isOnline" type="warning" variant="tonal" density="compact" class="mb-4">
+      Oflayn rejim — cheklar tarixi internet qaytganda yuklanadi. Oflaynda yozilgan cheklar
+      kassa sahifasida "kutilmoqda" sifatida saqlanadi va internet qaytganda avtomatik yuboriladi.
+    </VAlert>
+
     <VCard title="Cheklar" class="mb-6">
       <template #append>
         <VBtn variant="tonal" prepend-icon="tabler-printer" @click="printerDialog = true">
@@ -252,7 +257,7 @@
 import { useOrdersStore } from '@/@core/stores/orders'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { Order, OrderItem, OrderReturn } from '@/interface/order.interface'
-import { useDebounceFn } from '@vueuse/core'
+import { useDebounceFn, useOnline } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import PrinterSettingsDialog from '@/components/PrinterSettingsDialog.vue'
 import ReceiptPreview from '@/components/ReceiptPreview.vue'
@@ -271,6 +276,7 @@ definePage({
 const ordersStore = useOrdersStore()
 const toastStore = useToastStore()
 const customersStore = useCustomersStore()
+const isOnline = useOnline()
 const route = useRoute()
 
 const page = ref(1)
@@ -300,6 +306,8 @@ function hasActiveFilters() {
 
 async function refresh(p: number = 1) {
   page.value = p
+  // Oflayn rejimda cheklar tarixi serverdan olinadi — so'rov yubormaymiz
+  if (!isOnline.value) return
   try {
     if (hasActiveFilters()) {
       await ordersStore.searchOrders({
@@ -332,6 +340,10 @@ const detailReceipt = computed(() =>
 )
 
 async function openDetail(id: number) {
+  if (!isOnline.value) {
+    toastStore.error("Oflayn rejimda chek ma'lumotini ochib bo'lmaydi")
+    return
+  }
   try {
     detailOrder.value = await ordersStore.fetchOrder(id)
     orderReturns.value = await ordersStore.fetchOrderReturns(id)
@@ -510,6 +522,10 @@ function formatDate(value: string) {
     day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
 }
+
+watch(isOnline, online => {
+  if (online) refresh(1)
+})
 
 onMounted(() => {
   refresh(1)

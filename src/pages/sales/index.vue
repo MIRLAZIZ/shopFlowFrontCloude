@@ -187,8 +187,6 @@
               <span class="text-caption text-medium-emphasis text-end">{{ activeTargetLabel }}</span>
             </div>
 
-            <div class="pos-keypad-display mb-2">{{ pending || '0' }}</div>
-
             <div class="pos-keypad">
               <VBtn v-for="key in ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', '00', '⌫']" :key="key"
                 variant="tonal" class="pos-keypad__btn" @click="pressKey(key)">
@@ -212,9 +210,14 @@
               </VBtn>
             </div>
 
-            <VBtn variant="tonal" color="error" block class="mt-2" @click="pending = ''">
-              C — tozalash
-            </VBtn>
+            <div class="d-flex gap-2 mt-2">
+              <VBtn variant="tonal" color="error" class="flex-grow-1" @click="clearBarcodeInput">
+                C
+              </VBtn>
+              <VBtn variant="tonal" color="primary" class="flex-grow-1" @click="onBarcodeEnter">
+                Enter ↵
+              </VBtn>
+            </div>
 
             <VDivider class="my-3" />
 
@@ -445,6 +448,7 @@
 import { useCustomersStore } from '@/@core/stores/customers'
 import { useOfflineStore } from '@/@core/stores/offline'
 import { useOrdersStore } from '@/@core/stores/orders'
+import { Basket, CartLine, makeBasket, usePosStore } from '@/@core/stores/pos'
 import { useProductsStore } from '@/@core/stores/products'
 import { useToastStore } from '@/@core/stores/toast.store'
 import PrinterSettingsDialog from '@/components/PrinterSettingsDialog.vue'
@@ -457,6 +461,7 @@ import { ReceiptData, receiptFromCart, receiptFromOrder } from '@/utils/receipt'
 import { isCountUnit, unitLabelOf } from '@/utils/units'
 import { decodeQuantityBarcode, decodeReceiptBarcode } from '@/utils/weightBarcode'
 import { useDebounceFn, useOnline } from '@vueuse/core'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 
 definePage({
@@ -466,25 +471,12 @@ definePage({
   },
 })
 
-interface CartLine {
-  productId: number
-  name: string
-  unit: string // o'lchov birligi: kg, dona, litr...
-  price: number
-  quantity: number
-  discount: number
-  availableQuantity: number
-}
-
-interface Basket {
-  id: number
-  label: string
-  cart: CartLine[]
-  overallDiscountValue: number
-  note: string
-}
-
 const router = useRouter()
+const posStore = usePosStore()
+// Savatlar va to'lov maydonlari Pinia store'da — boshqa sahifaga o'tib
+// qaytganda ham, brauzer yangilanganda ham (oflayn bo'lsa ham) saqlanadi.
+const { baskets, activeBasketId, nextBasketId, mixedCash, mixedCard, mixedTouched, customerId } =
+  storeToRefs(posStore)
 const productsStore = useProductsStore()
 const ordersStore = useOrdersStore()
 const customersStore = useCustomersStore()
@@ -508,29 +500,17 @@ onMounted(() => {
   if (token) {
     const payload = decodeJwtPayload(token)
     cashierName.value = payload?.username || ''
+    posStore.ensureOwner(cashierName.value)
   }
 })
 
 // ─────────────────────────── Bir nechta savat (tablar) ───────────────────────────
-let nextBasketId = 2
-function makeBasket(id: number): Basket {
-  return {
-    id,
-    label: `Savat ${id}`,
-    cart: [],
-    overallDiscountValue: 0,
-    note: '',
-  }
-}
-
-const baskets = ref<Basket[]>([makeBasket(1)])
-const activeBasketId = ref(1)
 const activeBasket = computed(
   () => baskets.value.find(b => b.id === activeBasketId.value) ?? baskets.value[0],
 )
 
 function addBasket() {
-  const b = makeBasket(nextBasketId++)
+  const b = makeBasket(nextBasketId.value++)
   baskets.value.push(b)
   activeBasketId.value = b.id
   mixedTouched.value = false
@@ -921,15 +901,19 @@ function targetMixedCard() {
   bindTarget({ label: 'Karta', kind: 'mixedCard', lineId: null })
 }
 
-// Raqam tugmalari faqat "pending" buferga yoziladi — hech qanday
-// maydonga to'g'ridan-to'g'ri tegmaydi. Amal (+, -, ×, ÷, F6, F7)
-// bosilgandagina pending qiymati tegishli joyga qo'llaniladi.
+// Ekrandagi raqamlar paneli BARCODE INPUT'ga yozadi (jismoniy klaviatura
+// kabi). Amal (+, −, ×, ÷, F6, F7) bosilganda input'dagi raqam tegishli
+// joyga qo'llaniladi, Enter esa shtrix-kod/qisqa kod bo'yicha qidiradi.
 function pressKey(key: string) {
-  if (key === '⌫') {
-    pending.value = pending.value.slice(0, -1)
-    return
-  }
-  pending.value += key
+  const current = barcodeQuery.value ?? ''
+  barcodeQuery.value = key === '⌫' ? current.slice(0, -1) : current + key
+  focusBarcode()
+}
+
+function clearBarcodeInput() {
+  barcodeQuery.value = ''
+  pending.value = ''
+  focusBarcode()
 }
 
 function pendingNumber(): number {
@@ -1002,9 +986,6 @@ const paymentOptions = [
   { title: 'Aralash', value: 'mixed' },
 ]
 
-const mixedCash = ref(0)
-const mixedCard = ref(0)
-const mixedTouched = ref(false)
 
 watch(grandTotal, val => {
   if (!mixedTouched.value) mixedCash.value = val
@@ -1043,7 +1024,6 @@ const paymentSectionOpen = ref(false)
 const paymentTab = ref<'pay' | 'debt'>('pay')
 
 // ─────────────────────────── Mijoz ───────────────────────────
-const customerId = ref<number | null>(null)
 const customerSearch = ref('')
 const customerLoading = ref(false)
 const newCustomerInline = ref(false)
@@ -1421,15 +1401,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 .pos-row--disabled {
   cursor: not-allowed;
   opacity: 0.5;
-}
-
-.pos-keypad-display {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: rgba(var(--v-theme-on-surface), 0.06);
-  font-size: 1.25rem;
-  font-weight: 600;
-  text-align: end;
 }
 
 .pos-keypad {

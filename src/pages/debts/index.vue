@@ -1,5 +1,10 @@
 <template>
   <div>
+    <VAlert v-if="!isOnline" type="warning" variant="tonal" density="compact" class="mb-4">
+      Oflayn rejim — keshdagi ochiq qarzlar ko'rsatilmoqda. To'lov qabul qilish internet qaytganda
+      ishlaydi.
+    </VAlert>
+
     <VCard title="Qarzdorlar" class="mb-6">
       <VCardText>
         <VRow>
@@ -50,6 +55,7 @@
             <td>
               <VBtn
                 v-if="d.status === 'open'"
+                :disabled="!isOnline"
                 size="small"
                 color="primary"
                 variant="tonal"
@@ -117,7 +123,9 @@
 import { useDebtsStore } from '@/@core/stores/debts'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { Debt } from '@/interface/debt.interface'
+import { useOnline } from '@vueuse/core'
 import { useRoute } from 'vue-router'
+import { useOfflineStore } from '@/@core/stores/offline'
 
 definePage({
   meta: {
@@ -128,6 +136,7 @@ definePage({
 
 const route = useRoute()
 const debtsStore = useDebtsStore()
+const offlineStore = useOfflineStore()
 const toastStore = useToastStore()
 
 const statusOptions = [
@@ -154,7 +163,28 @@ function statusLabel(status: string) {
   return statusOptions.find(s => s.value === status)?.title ?? status
 }
 
+const isOnline = useOnline()
+
+// Oflayn rejim: keshlangan (ochiq) qarzlar ko'rsatiladi
+async function loadFromCache() {
+  const cached = await offlineStore.getCachedDebts()
+  const customerId = route.query.customerId ? Number(route.query.customerId) : undefined
+  const filtered = cached.filter((d: any) => {
+    if (statusFilter.value && d.status !== statusFilter.value) return false
+    if (customerId && d.customer?.id !== customerId) return false
+    return true
+  })
+  debtsStore.debts = filtered
+  debtsStore.total = filtered.length
+  debtsStore.limit = Math.max(filtered.length, 1)
+  debtsStore.page = 1
+}
+
 function refresh(page = 1) {
+  if (!isOnline.value) {
+    loadFromCache()
+    return
+  }
   const customerId = route.query.customerId ? Number(route.query.customerId) : undefined
   debtsStore
     .fetchDebts(page, statusFilter.value || undefined, customerId)
@@ -162,6 +192,8 @@ function refresh(page = 1) {
       toastStore.error(error?.data?.message || error?.response?._data?.message || 'Xatolik')
     })
 }
+
+watch(isOnline, () => refresh(1))
 
 const paymentDialog = ref(false)
 const activeDebt = ref<Debt | null>(null)

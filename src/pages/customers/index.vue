@@ -1,8 +1,13 @@
 <template>
   <div>
+    <VAlert v-if="!isOnline" type="warning" variant="tonal" density="compact" class="mb-4">
+      Oflayn rejim — keshdagi ma'lumotlar ko'rsatilmoqda. O'zgartirish (qo'shish, tahrirlash,
+      qarz tarixi) internet qaytganda ishlaydi.
+    </VAlert>
+
     <VCard title="Mijozlar" class="mb-6">
       <template #append>
-        <VBtn color="primary" prepend-icon="tabler-plus" @click="openCreate">
+        <VBtn color="primary" prepend-icon="tabler-plus" :disabled="!isOnline" @click="openCreate">
           Mijoz qo'shish
         </VBtn>
       </template>
@@ -39,13 +44,13 @@
               <span v-else>-</span>
             </td>
             <td>
-              <IconBtn @click="openEdit(c)">
+              <IconBtn :disabled="!isOnline" @click="openEdit(c)">
                 <VIcon icon="tabler-edit" color="success" />
               </IconBtn>
-              <IconBtn title="Qarz tarixi" @click="openHistory(c.id)">
+              <IconBtn title="Qarz tarixi" :disabled="!isOnline" @click="openHistory(c.id)">
                 <VIcon icon="tabler-history" color="warning" />
               </IconBtn>
-              <IconBtn @click="remove(c.id)">
+              <IconBtn :disabled="!isOnline" @click="remove(c.id)">
                 <VIcon icon="tabler-trash" color="error" />
               </IconBtn>
             </td>
@@ -90,7 +95,8 @@
 import { useCustomersStore } from '@/@core/stores/customers'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { Customer } from '@/interface/customer.interface'
-import { useDebounceFn } from '@vueuse/core'
+import { useDebounceFn, useOnline } from '@vueuse/core'
+import { useOfflineStore } from '@/@core/stores/offline'
 import CustomerHistoryDialog from '@/components/CustomerHistoryDialog.vue'
 import { useRouter } from 'vue-router'
 
@@ -103,6 +109,7 @@ definePage({
 
 const router = useRouter()
 const customersStore = useCustomersStore()
+const offlineStore = useOfflineStore()
 const toastStore = useToastStore()
 
 const search = ref('')
@@ -122,11 +129,32 @@ function openHistory(id: number) {
   historyDialog.value = true
 }
 
+const isOnline = useOnline()
+
+// Oflayn rejim: internet yo'q bo'lsa kassadagi kabi IndexedDB keshidan o'qiladi
+async function loadFromCache() {
+  const cached = await offlineStore.getCachedCustomers()
+  const q = search.value.trim().toLowerCase()
+  const filtered = cached.filter(
+    (c: any) => !q || c.fullName?.toLowerCase().includes(q) || c.phone?.toLowerCase().includes(q),
+  )
+  customersStore.customers = filtered
+  customersStore.total = filtered.length
+  customersStore.limit = Math.max(filtered.length, 1)
+  customersStore.page = 1
+}
+
 function refresh(page = 1) {
+  if (!isOnline.value) {
+    loadFromCache()
+    return
+  }
   customersStore.fetchCustomers(page, search.value || undefined).catch((error: any) => {
     toastStore.error(error?.data?.message || error?.response?._data?.message || 'Xatolik')
   })
 }
+
+watch(isOnline, () => refresh(1))
 
 const debouncedSearch = useDebounceFn(() => refresh(1), 400)
 watch(search, debouncedSearch)

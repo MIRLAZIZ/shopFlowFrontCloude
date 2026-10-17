@@ -7,6 +7,7 @@ import { VueRouterAutoImports, getPascalCaseRouteName } from 'unplugin-vue-route
 import VueRouter from 'unplugin-vue-router/vite'
 import { defineConfig } from 'vite'
 import Layouts from 'vite-plugin-vue-layouts'
+import { VitePWA } from 'vite-plugin-pwa'
 import vuetify from 'vite-plugin-vuetify'
 
 // https://vitejs.dev/config/
@@ -72,6 +73,54 @@ export default defineConfig({
 
       // ℹ️ Disabled to avoid confusion & accidental usage
       ignore: ['useCookies', 'useStorage'],
+    }),
+
+    // 📴 Oflayn ishlash: service worker ilova fayllarini (JS/CSS/HTML) keshlaydi,
+    // shuning uchun internet yo'q paytda brauzer yangilansa ham sahifalar ochiladi
+    // (kassa ma'lumotlari esa IndexedDB/localStorage'da). Faqat production
+    // build'da ishlaydi (npm run build + preview/hosting), dev rejimda o'chiq.
+    // API so'rovlari KESHLANMAYDI — faqat ilovaning o'zi.
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      includeAssets: ['favicon.ico', 'shopflow-favicon.svg', 'loader.css'],
+      manifest: {
+        name: "Do'kon Kassa",
+        short_name: 'Kassa',
+        description: "Do'kon boshqaruvi va kassa tizimi",
+        theme_color: '#2563EB',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
+        icons: [
+          { src: 'pwa-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'pwa-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2,ttf,eot}'],
+        // icons.css (iconify) bir necha MB — standart 2 MB chegarasidan oshadi
+        maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
+        runtimeCaching: [
+          {
+            // Google Fonts (webfontloader) — bir marta yuklangach oflaynda ham ishlaydi
+            urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
+      },
+      devOptions: { enabled: false },
     }),
 
   ],
