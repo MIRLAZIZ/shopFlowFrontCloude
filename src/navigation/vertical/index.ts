@@ -68,6 +68,13 @@ export default [
     subject: 'Dashboard'
   },
   {
+    title: 'Xarajatlar',
+    to: { name: 'expenses' },
+    icon: { icon: 'tabler-wallet' },
+    action: 'read',
+    subject: 'Dashboard'
+  },
+  {
     title: 'Statistika',
     to: { name: 'statistics' },
     icon: { icon: 'tabler-chart-bar' },

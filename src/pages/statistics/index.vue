@@ -15,7 +15,7 @@
     <template v-if="dashboard">
       <!-- ═══════════════ XULOSA KARTALARI ═══════════════ -->
       <VRow class="mb-4">
-        <VCol cols="6" sm="4" md="2">
+        <VCol cols="6" sm="4" md="3">
           <VCard>
             <VCardText>
               <div class="text-caption text-medium-emphasis">Tushum</div>
@@ -23,15 +23,31 @@
             </VCardText>
           </VCard>
         </VCol>
-        <VCol cols="6" sm="4" md="2">
+        <VCol cols="6" sm="4" md="3">
           <VCard>
             <VCardText>
-              <div class="text-caption text-medium-emphasis">Foyda</div>
+              <div class="text-caption text-medium-emphasis">Foyda (sotuvdan)</div>
               <div class="text-h6 text-success">{{ formatMoney(dashboard.totalProfit) }}</div>
             </VCardText>
           </VCard>
         </VCol>
-        <VCol cols="6" sm="4" md="2">
+        <VCol cols="6" sm="4" md="3">
+          <VCard>
+            <VCardText>
+              <div class="text-caption text-medium-emphasis">Xarajat</div>
+              <div class="text-h6 text-error">{{ formatMoney(dashboard.totalExpenses) }}</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+        <VCol cols="6" sm="4" md="3">
+          <VCard :color="dashboard.netProfit >= 0 ? 'success' : 'error'" variant="tonal">
+            <VCardText>
+              <div class="text-caption">Sof foyda</div>
+              <div class="text-h6">{{ formatMoney(dashboard.netProfit) }}</div>
+            </VCardText>
+          </VCard>
+        </VCol>
+        <VCol cols="6" sm="4" md="3">
           <VCard>
             <VCardText>
               <div class="text-caption text-medium-emphasis">Cheklar soni</div>
@@ -39,7 +55,7 @@
             </VCardText>
           </VCard>
         </VCol>
-        <VCol cols="6" sm="4" md="2">
+        <VCol cols="6" sm="4" md="3">
           <VCard>
             <VCardText>
               <div class="text-caption text-medium-emphasis">O'rtacha chek</div>
@@ -47,7 +63,7 @@
             </VCardText>
           </VCard>
         </VCol>
-        <VCol cols="6" sm="4" md="2">
+        <VCol cols="6" sm="4" md="3">
           <VCard :color="dashboard.totalOutstandingDebt > 0 ? 'error' : undefined" :variant="dashboard.totalOutstandingDebt > 0 ? 'tonal' : 'elevated'">
             <VCardText>
               <div class="text-caption" :class="dashboard.totalOutstandingDebt > 0 ? '' : 'text-medium-emphasis'">Qarzdorlik</div>
@@ -55,7 +71,7 @@
             </VCardText>
           </VCard>
         </VCol>
-        <VCol cols="6" sm="4" md="2">
+        <VCol cols="6" sm="4" md="3">
           <VCard :color="dashboard.lowStockCount + dashboard.outOfStockCount > 0 ? 'warning' : undefined" :variant="dashboard.lowStockCount + dashboard.outOfStockCount > 0 ? 'tonal' : 'elevated'">
             <VCardText>
               <div class="text-caption" :class="dashboard.lowStockCount + dashboard.outOfStockCount > 0 ? '' : 'text-medium-emphasis'">Kam/tugagan</div>

@@ -4,6 +4,8 @@ export interface StatisticsDashboard {
     dateTo: string
     totalRevenue: number
     totalProfit: number
+    totalExpenses: number
+    netProfit: number
     totalDiscount: number
     totalOrders: number
     averageOrderValue: number

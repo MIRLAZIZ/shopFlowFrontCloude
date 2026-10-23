@@ -126,6 +126,7 @@ const entityTypeOptions = [
   { title: 'Mahsulot', value: 'Product' },
   { title: 'Chek', value: 'Order' },
   { title: 'Qarz', value: 'Debt' },
+  { title: 'Xarajat', value: 'Expense' },
   { title: 'Foydalanuvchi', value: 'User' },
 ]
 
