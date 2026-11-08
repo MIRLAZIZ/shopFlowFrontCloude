@@ -127,6 +127,11 @@ const entityTypeOptions = [
   { title: 'Chek', value: 'Order' },
   { title: 'Qarz', value: 'Debt' },
   { title: 'Xarajat', value: 'Expense' },
+  { title: 'Yetkazib beruvchi', value: 'Supplier' },
+  { title: 'Yetkazib beruvchi qarzi', value: 'SupplierDebt' },
+  { title: "Pul harakati", value: 'CashAdjustment' },
+  { title: "Boshlang'ich qoldiq", value: 'FinanceOpening' },
+  { title: 'Partiya (inventarizatsiya)', value: 'ProductBatch' },
   { title: 'Foydalanuvchi', value: 'User' },
 ]
 

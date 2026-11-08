@@ -68,6 +68,13 @@ export default [
     subject: 'Dashboard'
   },
   {
+    title: 'Yetkazib beruvchilar',
+    to: { name: 'suppliers' },
+    icon: { icon: 'tabler-truck' },
+    action: 'read',
+    subject: 'Dashboard'
+  },
+  {
     title: 'Xarajatlar',
     to: { name: 'expenses' },
     icon: { icon: 'tabler-wallet' },

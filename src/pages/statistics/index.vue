@@ -1,7 +1,12 @@
 <template>
   <div>
+    <!-- ═══════════════ AYLANMA AKTIVLAR (hozirgi holat) ═══════════════ -->
+    <AssetsOverview class="mb-8" />
+
+    <VDivider class="mb-6" />
+
     <div class="d-flex align-center justify-space-between mb-4 flex-wrap gap-3">
-      <h4 class="text-h4">Statistika</h4>
+      <h4 class="text-h4">Savdo statistikasi</h4>
       <VBtnToggle v-model="period" color="primary" density="comfortable" mandatory @update:model-value="load">
         <VBtn value="today">Bugun</VBtn>
         <VBtn value="week">Hafta</VBtn>
@@ -154,6 +159,7 @@
 import { useStatisticsStore } from '@/@core/stores/statistics'
 import { useToastStore } from '@/@core/stores/toast.store'
 import VueApexCharts from 'vue3-apexcharts'
+import AssetsOverview from '@/components/AssetsOverview.vue'
 
 definePage({
   meta: {
