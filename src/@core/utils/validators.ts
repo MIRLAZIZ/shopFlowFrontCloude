@@ -31,7 +31,8 @@ export const passwordValidator = (password: string) => {
 }
 
 // 👉 Confirm Password Validator
-export const confirmedValidator = (value: string, target: string) =>
+export const confirmedValidator = (value: string | null, target: string | null) =>
+
 
   value === target || 'The Confirm Password field confirmation does not match'
 

@@ -56,8 +56,10 @@ declare global {
   const emailValidator: typeof import('./src/composables/validator')['emailValidator']
   const encodeText: typeof import('./src/utils/escpos')['encodeText']
   const extendRef: typeof import('@vueuse/core')['extendRef']
-  const formatDate: typeof import('./src/@core/utils/formatters')['formatDate']
+  const formatDate: typeof import('./src/utils/posFormat')['formatDate']
   const formatDateToMonthShort: typeof import('./src/@core/utils/formatters')['formatDateToMonthShort']
+  const formatMoney: typeof import('./src/utils/posFormat')['formatMoney']
+  const formatQty: typeof import('./src/utils/posFormat')['formatQty']
   const formatReceiptDate: typeof import('./src/utils/receipt')['formatReceiptDate']
   const generateQuantityBarcode: typeof import('./src/utils/weightBarcode')['generateQuantityBarcode']
   const generateReceiptBarcode: typeof import('./src/utils/weightBarcode')['generateReceiptBarcode']
@@ -118,6 +120,8 @@ declare global {
   const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const passwordValidator: typeof import('./src/composables/validator')['passwordValidator']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
+  const paymentLabel: typeof import('./src/utils/posFormat')['paymentLabel']
+  const paymentOptions: typeof import('./src/utils/posFormat')['paymentOptions']
   const paymentTypeLabel: typeof import('./src/utils/receipt')['paymentTypeLabel']
   const prefixWithPlus: typeof import('./src/@core/utils/formatters')['prefixWithPlus']
   const provide: typeof import('vue')['provide']
@@ -145,6 +149,8 @@ declare global {
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
   const resolveVuetifyTheme: typeof import('./src/@core/utils/vuetify')['resolveVuetifyTheme']
+  const round2: typeof import('./src/utils/posFormat')['round2']
+  const round3: typeof import('./src/utils/posFormat')['round3']
   const setActivePinia: typeof import('pinia')['setActivePinia']
   const setMapStoreSuffix: typeof import('pinia')['setMapStoreSuffix']
   const shallowReactive: typeof import('vue')['shallowReactive']
@@ -192,6 +198,7 @@ declare global {
   const useAsyncQueue: typeof import('@vueuse/core')['useAsyncQueue']
   const useAsyncState: typeof import('@vueuse/core')['useAsyncState']
   const useAttrs: typeof import('vue')['useAttrs']
+  const useAuth: typeof import('./src/composables/useUserData')['useAuth']
   const useAverage: typeof import('@vueuse/math')['useAverage']
   const useBase64: typeof import('@vueuse/core')['useBase64']
   const useBattery: typeof import('@vueuse/core')['useBattery']
@@ -293,6 +300,12 @@ declare global {
   const usePointer: typeof import('@vueuse/core')['usePointer']
   const usePointerLock: typeof import('@vueuse/core')['usePointerLock']
   const usePointerSwipe: typeof import('@vueuse/core')['usePointerSwipe']
+  const usePosBarcode: typeof import('./src/composables/usePosBarcode')['usePosBarcode']
+  const usePosCart: typeof import('./src/composables/usePosCart')['usePosCart']
+  const usePosCashier: typeof import('./src/composables/usePosCashier')['usePosCashier']
+  const usePosCheckout: typeof import('./src/composables/usePosCheckout')['usePosCheckout']
+  const usePosHotkeys: typeof import('./src/composables/usePosHotkeys')['usePosHotkeys']
+  const usePosKeypad: typeof import('./src/composables/usePosKeypad')['usePosKeypad']
   const usePrecision: typeof import('@vueuse/math')['usePrecision']
   const usePreferredColorScheme: typeof import('@vueuse/core')['usePreferredColorScheme']
   const usePreferredContrast: typeof import('@vueuse/core')['usePreferredContrast']
@@ -349,6 +362,7 @@ declare global {
   const useTransition: typeof import('@vueuse/core')['useTransition']
   const useTrunc: typeof import('@vueuse/math')['useTrunc']
   const useUrlSearchParams: typeof import('@vueuse/core')['useUrlSearchParams']
+  const useUserData: typeof import('./src/composables/useUserData')['useUserData']
   const useUserMedia: typeof import('@vueuse/core')['useUserMedia']
   const useVModel: typeof import('@vueuse/core')['useVModel']
   const useVModels: typeof import('@vueuse/core')['useVModels']
@@ -363,6 +377,7 @@ declare global {
   const useWindowScroll: typeof import('@vueuse/core')['useWindowScroll']
   const useWindowSize: typeof import('@vueuse/core')['useWindowSize']
   const usecreateUrl: typeof import('./src/@core/composable/usecreateUrl')['usecreateUrl']
+  const userCookeUserData: typeof import('./src/composables/validator')['userCookeUserData']
   const watch: typeof import('vue')['watch']
   const watchArray: typeof import('@vueuse/core')['watchArray']
   const watchAtMost: typeof import('@vueuse/core')['watchAtMost']
@@ -442,7 +457,10 @@ declare module 'vue' {
     readonly encodeText: UnwrapRef<typeof import('./src/utils/escpos')['encodeText']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
     readonly formatDate: UnwrapRef<typeof import('./src/@core/utils/formatters')['formatDate']>
+    readonly formatDate: UnwrapRef<typeof import('./src/utils/posFormat')['formatDate']>
     readonly formatDateToMonthShort: UnwrapRef<typeof import('./src/@core/utils/formatters')['formatDateToMonthShort']>
+    readonly formatMoney: UnwrapRef<typeof import('./src/utils/posFormat')['formatMoney']>
+    readonly formatQty: UnwrapRef<typeof import('./src/utils/posFormat')['formatQty']>
     readonly formatReceiptDate: UnwrapRef<typeof import('./src/utils/receipt')['formatReceiptDate']>
     readonly generateQuantityBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['generateQuantityBarcode']>
     readonly generateReceiptBarcode: UnwrapRef<typeof import('./src/utils/weightBarcode')['generateReceiptBarcode']>
@@ -467,7 +485,6 @@ declare module 'vue' {
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isToday: UnwrapRef<typeof import('./src/@core/utils/helpers')['isToday']>
     readonly isToday: UnwrapRef<typeof import('./src/composables/helpers')['isToday']>
-    readonly kFormatter: UnwrapRef<typeof import('./src/@core/utils/formatters')['kFormatter']>
     readonly lengthValidator: UnwrapRef<typeof import('./src/composables/validator')['lengthValidator']>
     readonly logicAnd: UnwrapRef<typeof import('@vueuse/math')['logicAnd']>
     readonly logicNot: UnwrapRef<typeof import('@vueuse/math')['logicNot']>
@@ -503,6 +520,8 @@ declare module 'vue' {
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly passwordValidator: UnwrapRef<typeof import('./src/composables/validator')['passwordValidator']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
+    readonly paymentLabel: UnwrapRef<typeof import('./src/utils/posFormat')['paymentLabel']>
+    readonly paymentOptions: UnwrapRef<typeof import('./src/utils/posFormat')['paymentOptions']>
     readonly paymentTypeLabel: UnwrapRef<typeof import('./src/utils/receipt')['paymentTypeLabel']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
@@ -527,6 +546,8 @@ declare module 'vue' {
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
     readonly resolveVuetifyTheme: UnwrapRef<typeof import('./src/@core/utils/vuetify')['resolveVuetifyTheme']>
+    readonly round2: UnwrapRef<typeof import('./src/utils/posFormat')['round2']>
+    readonly round3: UnwrapRef<typeof import('./src/utils/posFormat')['round3']>
     readonly setActivePinia: UnwrapRef<typeof import('pinia')['setActivePinia']>
     readonly setMapStoreSuffix: UnwrapRef<typeof import('pinia')['setMapStoreSuffix']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
@@ -726,6 +747,7 @@ declare module 'vue' {
     readonly useTransition: UnwrapRef<typeof import('@vueuse/core')['useTransition']>
     readonly useTrunc: UnwrapRef<typeof import('@vueuse/math')['useTrunc']>
     readonly useUrlSearchParams: UnwrapRef<typeof import('@vueuse/core')['useUrlSearchParams']>
+    readonly useUserData: UnwrapRef<typeof import('./src/composables/useUserData')['useUserData']>
     readonly useUserMedia: UnwrapRef<typeof import('@vueuse/core')['useUserMedia']>
     readonly useVModel: UnwrapRef<typeof import('@vueuse/core')['useVModel']>
     readonly useVModels: UnwrapRef<typeof import('@vueuse/core')['useVModels']>

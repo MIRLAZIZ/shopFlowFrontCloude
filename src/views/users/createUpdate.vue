@@ -1,11 +1,12 @@
 <script setup lang="ts">
 // import { PriceMode } from 'common/enums/priceMode.enum'
-import { useCategoriesStore } from '@/@core/stores/categories'
+// import { useCategoriesStore } from '@/@core/stores/categories'
+import { Role } from '@/@core/enums'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { useUsersStore } from '@/@core/stores/users'
 import { UserData } from '@/interface/user-data.interface'
 import { User } from '@/interface/users.interface'
-import { confirmedValidator, passwordValidator, requiredValidator } from '@core/utils/validators'
+import { confirmedValidator, requiredValidator } from '@core/utils/validators'
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { VForm } from 'vuetify/lib/components/index.mjs'
@@ -14,7 +15,7 @@ import { VForm } from 'vuetify/lib/components/index.mjs'
 
 
 
-const categoryStore = useCategoriesStore()
+// const categoryStore = useCategoriesStore()
 const store = useUsersStore()
 const router = useRouter()
 const toastStore = useToastStore()
@@ -27,10 +28,15 @@ const userForm = ref<User>({
     brandName: null,
     role: null,
     phone: null,
+    telegramId: null,
+    telegramGroupId: null
 
 
 
 })
+
+const isPasswordVisible = ref(false)
+const isConfirmPasswordVisible = ref(false)
 
 const errorMessage = ref({
     name: null,
@@ -46,7 +52,7 @@ const formRef = ref<InstanceType<typeof VForm> | null>(null)
 const userRole = ref<UserData>()
 
 onMounted(() => {
-    categoryStore.fetchcategories()
+    // categoryStore.fetchcategories()
 
     if (userId) {
         store.fetchOneUser(Number(userId)).then((response) => {
@@ -197,7 +203,7 @@ const saveProduct = () => {
                                 <VCol cols="12" md="6">
                                     <AppTextField v-model="userForm.brandName" label="Tashkilot nomi"
                                         placeholder="tashkilot nomi" :error-messages="errorMessage.quick_code"
-                                        :rules="userForm.role == 'client' ? [requiredValidator] : []" />
+                                        :rules="userForm.role == Role.Client ? [requiredValidator] : []" />
                                 </VCol>
 
 
@@ -206,22 +212,27 @@ const saveProduct = () => {
                                     <AppTextField v-model="userForm.password" label="parol"
                                         placeholder="parolni kiriting"
                                         hint="Kamida 8 ta belgi: katta/kichik harf, raqam va maxsus belgi."
-                                        type="password" :error-messages="errorMessage.quick_code"
-                                        :rules=[passwordValidator] />
+                                        :type="isPasswordVisible ? 'text' : 'password'"
+                                        :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+                                        @click:append-inner="isPasswordVisible = !isPasswordVisible"
+                                        :error-messages="errorMessage.quick_code" :rules=[requiredValidator] />
                                 </VCol>
 
                                 <!-- confirmpassword -->
                                 <VCol cols="12" md="6" v-if="!userId">
                                     <AppTextField v-model="confirmPassword" label="parolni takrorlang"
-                                        placeholder="parolni takrorlang" type="password"
-                                        :rules="[requiredValidator, confirmedValidator]" />
+                                        placeholder="parolni takrorlang"
+                                        :type="isConfirmPasswordVisible ? 'text' : 'password'"
+                                        :append-inner-icon="isConfirmPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
+                                        @click:append-inner="isConfirmPasswordVisible = !isConfirmPasswordVisible"
+                                        :rules="[requiredValidator, confirmedValidator(confirmPassword, userForm.password)]" />
                                 </VCol>
 
 
                                 <!-- role -->
-                                <VCol cols="12" md="6" v-if="userRole?.role == 'admin'">
+                                <VCol cols="12" md="6" v-if="userRole?.role == Role.Client">
                                     <AppSelect v-model="userForm.role"
-                                        :items='[{ title: "Agent", value: "agent" }, { title: "Client", value: "client" }]'
+                                        :items='[{ title: "meneger", value: Role.Manager }, { title: "kashier", value: "kashier" }]'
                                         label="role" placeholder="Tanlang" item-title="title" item-value="value"
                                         :rules="[requiredValidator]" />
                                 </VCol>

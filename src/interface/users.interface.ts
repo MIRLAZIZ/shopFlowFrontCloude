@@ -1,12 +1,14 @@
+import { Role } from "@/@core/enums";
+
 export interface User {
     fullName: string | null;
     username: string | null;
     password: string | null;
     brandName: string | null;
-    role: string | null;
+    role: Role | null;
     phone: string | null;
-    // telegramId: number | null;
-    // telegramGroupId: string | null;
+    telegramId: number | null;
+    telegramGroupId: string | null;
 
 }
 
@@ -15,7 +17,7 @@ export interface UserData {
     id: number;
     username: string;
     phone: string | null;
-    role: string;
+    role: Role;
 }
 
 

@@ -103,3 +103,9 @@ export const alphaDashValidator = (value: unknown) => {
 
     return /^[0-9A-Z_-]*$/i.test(valueAsString) || 'All Character are not valid'
 }
+
+
+// export const userCookeUserData = () => {
+//     const UserData = useCookie('userData').value
+//     return UserData
+// }

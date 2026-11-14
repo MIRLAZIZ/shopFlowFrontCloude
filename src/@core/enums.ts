@@ -20,4 +20,11 @@ export const Direction = {
   Rtl: 'rtl',
 } as const
 
+export enum Role {
+  Admin = 'admin',
+  Client = 'client',
+  Cashier = 'cashier',
+  Manager = 'manager'
+
+}
 

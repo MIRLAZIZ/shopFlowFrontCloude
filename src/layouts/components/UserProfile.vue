@@ -5,11 +5,22 @@ const logout = () => {
   useCookie('userData').value = null
   useCookie('accessToken').value = null
 
+
+
   // router.push({ name: 'login' })
 }
+const userData = useUserData()
+
+const userRole = ref()
+onMounted(() => {
+  userRole.value = useCookie('userData').value
+})
 </script>
 
 <template>
+  {{ userData?.role }}
+
+
   <VBadge dot location="bottom right" offset-x="3" offset-y="3" bordered color="success">
     <VAvatar class="cursor-pointer" color="primary" variant="tonal">
       <VImg :src="avatar1" />
