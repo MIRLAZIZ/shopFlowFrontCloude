@@ -4,7 +4,6 @@
 import { Role } from '@/@core/enums'
 import { useToastStore } from '@/@core/stores/toast.store'
 import { useUsersStore } from '@/@core/stores/users'
-import { UserData } from '@/interface/user-data.interface'
 import { User } from '@/interface/users.interface'
 import { confirmedValidator, requiredValidator } from '@core/utils/validators'
 import { ref } from 'vue'
@@ -45,14 +44,21 @@ const errorMessage = ref({
 })
 const confirmPassword = ref<string>('')
 
+const userData = useUserData()
+
 
 
 const isLoading = ref(false)
 const formRef = ref<InstanceType<typeof VForm> | null>(null)
-const userRole = ref<UserData>()
 
+const defaultRole = {
+    [Role.Admin]: Role.Client,
+    [Role.Manager]: Role.Cashier,
+}
 onMounted(() => {
     // categoryStore.fetchcategories()
+
+
 
     if (userId) {
         store.fetchOneUser(Number(userId)).then((response) => {
@@ -70,7 +76,10 @@ onMounted(() => {
         })
     }
 
-    userRole.value = useCookie<UserData>('userData').value
+    userForm.value.role = defaultRole[userData.value?.role] ?? userForm.value.role
+
+
+
 
 })
 
@@ -200,7 +209,7 @@ const saveProduct = () => {
 
 
                                 <!-- brandName -->
-                                <VCol cols="12" md="6">
+                                <VCol cols="12" md="6" v-if="userData?.role == Role.Admin">
                                     <AppTextField v-model="userForm.brandName" label="Tashkilot nomi"
                                         placeholder="tashkilot nomi" :error-messages="errorMessage.quick_code"
                                         :rules="userForm.role == Role.Client ? [requiredValidator] : []" />
@@ -228,13 +237,27 @@ const saveProduct = () => {
                                         :rules="[requiredValidator, confirmedValidator(confirmPassword, userForm.password)]" />
                                 </VCol>
 
-
                                 <!-- role -->
-                                <VCol cols="12" md="6" v-if="userRole?.role == Role.Client">
+                                <VCol cols="12" md="6" v-if="userData?.role == Role.Client">
                                     <AppSelect v-model="userForm.role"
-                                        :items='[{ title: "meneger", value: Role.Manager }, { title: "kashier", value: "kashier" }]'
+                                        :items='[{ title: "Meneger", value: Role.Manager }, { title: "Kassir", value: Role.Cashier }]'
                                         label="role" placeholder="Tanlang" item-title="title" item-value="value"
                                         :rules="[requiredValidator]" />
+                                </VCol>
+
+                                <!-- telegram id -->
+
+                                <VCol cols="12" md="6" v-if="userData?.role == Role.Admin">
+                                    <AppTextField v-model="userForm.telegramId" label="telegram id"
+                                        placeholder="Telegram id" type="number" />
+                                </VCol>
+
+
+                                <!-- telegram group id -->
+
+                                <VCol cols="12" md="6" v-if="userData?.role == Role.Admin">
+                                    <AppTextField v-model="userForm.telegramGroupId" label="telegram group id"
+                                        placeholder="Telegram  group id" />
                                 </VCol>
 
 

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import avatar1 from '@images/avatars/avatar-1.png';
-
 const logout = () => {
   useCookie('userData').value = null
   useCookie('accessToken').value = null
@@ -11,10 +10,7 @@ const logout = () => {
 }
 const userData = useUserData()
 
-const userRole = ref()
-onMounted(() => {
-  userRole.value = useCookie('userData').value
-})
+
 </script>
 
 <template>

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { useToastStore } from '@/@core/stores/toast.store'
-import { useUsersStore } from '@/@core/stores/users'
-import { confirmedValidator, passwordValidator } from '@core/utils/validators'
-import { VForm } from 'vuetify/lib/components/index.mjs'
+import { useToastStore } from '@/@core/stores/toast.store';
+import { useUsersStore } from '@/@core/stores/users';
+import { confirmedValidator, requiredValidator } from '@core/utils/validators';
+import { VForm } from 'vuetify/lib/components/index.mjs';
 
 const props = defineProps({
     isDialogVisible: {
@@ -70,7 +70,7 @@ const closeNavigationDrawer = () => {
                                 :type="isPasswordVisible ? 'text' : 'password'"
                                 :append-inner-icon="isPasswordVisible ? 'tabler-eye-off' : 'tabler-eye'"
                                 @click:append-inner="isPasswordVisible = !isPasswordVisible"
-                                :rules="[passwordValidator]" />
+                                :rules="[requiredValidator]" />
                         </VCol>
 
                         <!-- confirmpassword -->

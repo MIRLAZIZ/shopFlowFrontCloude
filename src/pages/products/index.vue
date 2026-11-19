@@ -23,11 +23,11 @@
               item-title="text" item-value="value" />
           </VCol>
 
-          <!-- 👉 Select Category -->
+          <!-- 👉 Select Category
           <VCol cols="12" sm="4">
             <AppSelect v-model="filterAndSearch.categoryId" placeholder="Category" :items="categoryisStoere.categories"
               clearable clear-icon="tabler-x" item-value="id" item-title="name" />
-          </VCol>
+          </VCol> -->
 
           <!-- 👉 Select Stock Status -->
           <VCol cols="12" sm="4">
@@ -229,7 +229,7 @@ const refresh = () => {
 
 onMounted(() => {
   refresh()
-  categoryisStoere.fetchcategories()
+  // categoryisStoere.fetchcategories()
 
 })
 

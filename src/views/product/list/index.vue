@@ -69,18 +69,18 @@ const totalProduct = computed(() => productsData.value.total)
 
 
 
-const deleteUnit = () => {
-  if (!itemId.value) return
-  store.deleteCategory(itemId.value).then(() => {
-    refresh()
-    ToastService.success(t('success'))
-    delateModal.value = false
+// const deleteUnit = () => {
+//   if (!itemId.value) return
+//   store.deleteCategory(itemId.value).then(() => {
+//     refresh()
+//     ToastService.success(t('success'))
+//     delateModal.value = false
 
-  })
-    .catch((error) => {
-      ToastService.error(error.response._data.message)
-    })
-}
+//   })
+//     .catch((error) => {
+//       ToastService.error(error.response._data.message)
+//     })
+// }
 </script>
 
 <template>
